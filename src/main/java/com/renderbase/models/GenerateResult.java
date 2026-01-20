@@ -15,6 +15,12 @@ public class GenerateResult {
     @JsonProperty("status")
     private String status;
 
+    @JsonProperty("statusUrl")
+    private String statusUrl;
+
+    @JsonProperty("estimatedWaitSeconds")
+    private Integer estimatedWaitSeconds;
+
     @JsonProperty("downloadUrl")
     private String downloadUrl;
 
@@ -44,6 +50,22 @@ public class GenerateResult {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getStatusUrl() {
+        return statusUrl;
+    }
+
+    public void setStatusUrl(String statusUrl) {
+        this.statusUrl = statusUrl;
+    }
+
+    public Integer getEstimatedWaitSeconds() {
+        return estimatedWaitSeconds;
+    }
+
+    public void setEstimatedWaitSeconds(Integer estimatedWaitSeconds) {
+        this.estimatedWaitSeconds = estimatedWaitSeconds;
     }
 
     public String getDownloadUrl() {
@@ -78,11 +100,40 @@ public class GenerateResult {
         this.templateId = templateId;
     }
 
+    /**
+     * Checks if the job is in a terminal state (completed or failed).
+     *
+     * @return true if the job is completed or failed
+     */
+    public boolean isTerminal() {
+        return "completed".equals(status) || "failed".equals(status);
+    }
+
+    /**
+     * Checks if the job completed successfully.
+     *
+     * @return true if the job completed successfully
+     */
+    public boolean isCompleted() {
+        return "completed".equals(status);
+    }
+
+    /**
+     * Checks if the job failed.
+     *
+     * @return true if the job failed
+     */
+    public boolean isFailed() {
+        return "failed".equals(status);
+    }
+
     @Override
     public String toString() {
         return "GenerateResult{" +
                 "jobId='" + jobId + '\'' +
                 ", status='" + status + '\'' +
+                ", statusUrl='" + statusUrl + '\'' +
+                ", estimatedWaitSeconds=" + estimatedWaitSeconds +
                 ", downloadUrl='" + downloadUrl + '\'' +
                 ", format='" + format + '\'' +
                 '}';

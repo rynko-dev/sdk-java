@@ -50,8 +50,8 @@ public class Example {
         variables.put("customerName", "Acme Corporation");
         variables.put("amount", 1250.00);
 
-        // Generate a PDF document
-        GenerateResult result = client.documents().generate(
+        // Queue document generation (async operation)
+        GenerateResult job = client.documents().generate(
             GenerateRequest.builder()
                 .templateId("tmpl_invoice")
                 .format("pdf")
@@ -59,7 +59,17 @@ public class Example {
                 .build()
         );
 
-        System.out.println("Download URL: " + result.getDownloadUrl());
+        System.out.println("Job ID: " + job.getJobId());
+        System.out.println("Status: " + job.getStatus());  // "queued"
+
+        // Wait for completion to get download URL
+        GenerateResult completed = client.documents().waitForCompletion(job.getJobId());
+
+        if (completed.isCompleted()) {
+            System.out.println("Download URL: " + completed.getDownloadUrl());
+        } else {
+            System.err.println("Job failed");
+        }
     }
 }
 ```
@@ -94,10 +104,13 @@ Renderbase client = new Renderbase(config);
 
 ### Generating Documents
 
+Document generation is an **asynchronous operation**. When you call `generate()`, the job is queued for processing. Use `waitForCompletion()` to poll until the document is ready.
+
 #### Generate PDF
 
 ```java
-GenerateResult result = client.documents().generate(
+// Queue document generation
+GenerateResult job = client.documents().generate(
     GenerateRequest.builder()
         .templateId("tmpl_invoice")
         .format("pdf")
@@ -107,46 +120,48 @@ GenerateResult result = client.documents().generate(
             Map.of("name", "Widget", "price", 29.99),
             Map.of("name", "Gadget", "price", 49.99)
         ))
-        .filename("invoice-001.pdf")
+        .filename("invoice-001")
         .build()
 );
 
-System.out.println("Job ID: " + result.getJobId());
-System.out.println("Status: " + result.getStatus());
-System.out.println("Download: " + result.getDownloadUrl());
+System.out.println("Job ID: " + job.getJobId());
+System.out.println("Status: " + job.getStatus());  // "queued"
+
+// Wait for completion
+GenerateResult completed = client.documents().waitForCompletion(job.getJobId());
+System.out.println("Download: " + completed.getDownloadUrl());
 ```
 
 #### Generate Excel
 
 ```java
-GenerateResult result = client.documents().generate(
+GenerateResult job = client.documents().generate(
     GenerateRequest.builder()
         .templateId("tmpl_report")
         .format("xlsx")
         .variables(reportData)
         .build()
 );
+
+GenerateResult completed = client.documents().waitForCompletion(job.getJobId());
 ```
 
-#### Generate in Specific Workspace
+#### Custom Polling Settings
 
 ```java
-// Generate document in a specific workspace
-GenerateResult result = client.documents().generate(
-    GenerateRequest.builder()
-        .templateId("tmpl_invoice")
-        .format("pdf")
-        .workspaceId("ws_abc123")  // Optional: specify target workspace
-        .variable("invoiceNumber", "INV-001")
-        .variable("customerName", "John Doe")
-        .build()
+// Wait with custom poll interval (2 seconds) and timeout (60 seconds)
+GenerateResult completed = client.documents().waitForCompletion(
+    job.getJobId(),
+    2000,   // pollIntervalMs
+    60000   // timeoutMs
 );
 ```
 
 #### Download Document
 
 ```java
-byte[] documentBytes = client.documents().download(result.getDownloadUrl());
+// After waiting for completion
+byte[] documentBytes = client.documents().download(completed.getDownloadUrl());
 
 // Save to file
 try (FileOutputStream fos = new FileOutputStream("document.pdf")) {
@@ -336,7 +351,8 @@ public class DocumentService {
     }
 
     public String generateInvoice(Invoice invoice) {
-        GenerateResult result = renderbase.documents().generate(
+        // Queue document generation
+        GenerateResult job = renderbase.documents().generate(
             GenerateRequest.builder()
                 .templateId("tmpl_invoice")
                 .format("pdf")
@@ -345,7 +361,15 @@ public class DocumentService {
                 .variable("lineItems", invoice.getLineItems())
                 .build()
         );
-        return result.getDownloadUrl();
+
+        // Wait for completion
+        GenerateResult completed = renderbase.documents().waitForCompletion(job.getJobId());
+
+        if (completed.isFailed()) {
+            throw new RuntimeException("Document generation failed");
+        }
+
+        return completed.getDownloadUrl();
     }
 }
 ```
@@ -364,11 +388,13 @@ public class DocumentService {
 
 | Method | Description |
 |--------|-------------|
-| `generate(request)` | Generate a document from a template |
+| `generate(request)` | Queue document generation (returns job with `queued` status) |
 | `get(jobId)` | Get a document generation job by ID |
 | `list()` | List document generation jobs |
 | `list(page, limit)` | List with pagination |
 | `list(page, limit, templateId, workspaceId)` | List with filters |
+| `waitForCompletion(jobId)` | Poll until job completes (default: 1s interval, 30s timeout) |
+| `waitForCompletion(jobId, pollIntervalMs, timeoutMs)` | Poll with custom settings |
 | `delete(jobId)` | Delete a generated document |
 | `download(url)` | Download document as bytes |
 

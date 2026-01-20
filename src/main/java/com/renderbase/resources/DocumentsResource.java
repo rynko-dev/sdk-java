@@ -13,21 +13,28 @@ import java.util.Map;
 /**
  * Resource for document generation operations.
  *
- * <p>Use this resource to generate PDF and Excel documents from templates.</p>
+ * <p>Use this resource to generate PDF and Excel documents from templates.
+ * Document generation is asynchronous - jobs are queued and processed in the background.
+ * Use {@link #waitForCompletion(String)} to poll until the job completes.</p>
  *
  * <h2>Example:</h2>
  * <pre>{@code
- * GenerateResult result = client.documents().generate(
+ * // Queue document generation (async operation)
+ * GenerateResult job = client.documents().generate(
  *     GenerateRequest.builder()
  *         .templateId("tmpl_invoice")
  *         .format("pdf")
  *         .variable("invoiceNumber", "INV-001")
  *         .variable("customerName", "Acme Corp")
- *         .workspaceId("ws_abc123")  // Optional
  *         .build()
  * );
  *
- * System.out.println("Download URL: " + result.getDownloadUrl());
+ * System.out.println("Job ID: " + job.getJobId());
+ * System.out.println("Status: " + job.getStatus());  // "queued"
+ *
+ * // Wait for completion to get download URL
+ * GenerateResult completed = client.documents().waitForCompletion(job.getJobId());
+ * System.out.println("Download URL: " + completed.getDownloadUrl());
  * }</pre>
  *
  * @since 1.0.0
@@ -120,6 +127,54 @@ public class DocumentsResource {
      */
     public void delete(String jobId) throws RenderbaseException {
         httpClient.delete("/documents/jobs/" + jobId);
+    }
+
+    /**
+     * Waits for a document generation job to complete.
+     *
+     * <p>Polls the job status at regular intervals until the job completes or fails,
+     * or until the timeout is exceeded.</p>
+     *
+     * @param jobId The job ID to wait for
+     * @return The completed generation result with download URL
+     * @throws RenderbaseException if the request fails or the job fails
+     * @throws RuntimeException if the timeout is exceeded
+     */
+    public GenerateResult waitForCompletion(String jobId) throws RenderbaseException {
+        return waitForCompletion(jobId, 1000, 30000);
+    }
+
+    /**
+     * Waits for a document generation job to complete with custom polling settings.
+     *
+     * @param jobId The job ID to wait for
+     * @param pollIntervalMs Time between polls in milliseconds (default: 1000)
+     * @param timeoutMs Maximum wait time in milliseconds (default: 30000)
+     * @return The completed generation result with download URL
+     * @throws RenderbaseException if the request fails or the job fails
+     * @throws RuntimeException if the timeout is exceeded
+     */
+    public GenerateResult waitForCompletion(String jobId, long pollIntervalMs, long timeoutMs) throws RenderbaseException {
+        long startTime = System.currentTimeMillis();
+
+        while (true) {
+            GenerateResult job = get(jobId);
+
+            if (job.isTerminal()) {
+                return job;
+            }
+
+            if (System.currentTimeMillis() - startTime > timeoutMs) {
+                throw new RuntimeException("Timeout waiting for job " + jobId + " to complete");
+            }
+
+            try {
+                Thread.sleep(pollIntervalMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Interrupted while waiting for job " + jobId, e);
+            }
+        }
     }
 
     /**
