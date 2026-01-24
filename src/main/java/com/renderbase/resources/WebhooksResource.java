@@ -20,7 +20,8 @@ import java.util.Map;
 /**
  * Resource for webhook operations and signature verification.
  *
- * <p>Use this resource to manage webhook subscriptions and verify incoming webhook signatures.</p>
+ * <p>Use this resource to list webhook subscriptions and verify incoming webhook signatures.
+ * Webhook subscriptions are managed through the Renderbase dashboard.</p>
  *
  * <h2>Signature Verification Example:</h2>
  * <pre>{@code
@@ -118,39 +119,6 @@ public class WebhooksResource {
      */
     public WebhookSubscription get(String webhookId) throws RenderbaseException {
         return httpClient.get("/webhook-subscriptions/" + webhookId, WebhookSubscription.class);
-    }
-
-    /**
-     * Creates a new webhook subscription.
-     *
-     * @param request The webhook subscription request
-     * @return The created webhook subscription
-     * @throws RenderbaseException if the request fails
-     */
-    public WebhookSubscription create(CreateWebhookRequest request) throws RenderbaseException {
-        return httpClient.post("/webhook-subscriptions", request, WebhookSubscription.class);
-    }
-
-    /**
-     * Updates a webhook subscription.
-     *
-     * @param webhookId The webhook subscription ID
-     * @param request   The update request
-     * @return The updated webhook subscription
-     * @throws RenderbaseException if the request fails
-     */
-    public WebhookSubscription update(String webhookId, UpdateWebhookRequest request) throws RenderbaseException {
-        return httpClient.patch("/webhook-subscriptions/" + webhookId, request, WebhookSubscription.class);
-    }
-
-    /**
-     * Deletes a webhook subscription.
-     *
-     * @param webhookId The webhook subscription ID
-     * @throws RenderbaseException if the request fails
-     */
-    public void delete(String webhookId) throws RenderbaseException {
-        httpClient.delete("/webhook-subscriptions/" + webhookId);
     }
 
     /**
@@ -303,51 +271,6 @@ public class WebhooksResource {
         public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
         public String getUpdatedAt() { return updatedAt; }
         public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
-    }
-
-    /**
-     * Request to create a webhook subscription.
-     */
-    public static class CreateWebhookRequest {
-        private String url;
-        private String[] events;
-        private String description;
-
-        public CreateWebhookRequest() {}
-
-        public CreateWebhookRequest(String url, String[] events) {
-            this.url = url;
-            this.events = events;
-        }
-
-        public CreateWebhookRequest(String url, String[] events, String description) {
-            this.url = url;
-            this.events = events;
-            this.description = description;
-        }
-
-        public String getUrl() { return url; }
-        public void setUrl(String url) { this.url = url; }
-        public String[] getEvents() { return events; }
-        public void setEvents(String[] events) { this.events = events; }
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
-    }
-
-    /**
-     * Request to update a webhook subscription.
-     */
-    public static class UpdateWebhookRequest {
-        private String[] events;
-        private String description;
-        private Boolean isActive;
-
-        public String[] getEvents() { return events; }
-        public void setEvents(String[] events) { this.events = events; }
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
-        public Boolean getIsActive() { return isActive; }
-        public void setIsActive(Boolean isActive) { this.isActive = isActive; }
     }
 
     /**
