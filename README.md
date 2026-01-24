@@ -2,6 +2,38 @@
 
 Official Java SDK for [Renderbase](https://renderbase.dev) - the document generation platform with unified template design for PDF and Excel documents.
 
+[![Maven Central](https://img.shields.io/maven-central/v/com.renderbase/sdk.svg)](https://search.maven.org/artifact/com.renderbase/sdk)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Table of Contents
+
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Authentication](#authentication)
+- [Document Generation](#document-generation)
+  - [Generate PDF](#generate-pdf)
+  - [Generate Excel](#generate-excel)
+  - [Using Builder Pattern](#using-builder-pattern)
+  - [Wait for Completion](#wait-for-completion)
+  - [Download Document](#download-document)
+- [Document Jobs](#document-jobs)
+  - [Get Job Status](#get-job-status)
+  - [List Jobs](#list-jobs)
+- [Templates](#templates)
+  - [List Templates](#list-templates)
+  - [Get Template Details](#get-template-details)
+- [Webhooks](#webhooks)
+  - [List Webhooks](#list-webhooks)
+  - [Verify Webhook Signatures](#verify-webhook-signatures)
+- [Configuration](#configuration)
+- [Error Handling](#error-handling)
+- [Thread Safety](#thread-safety)
+- [Spring Boot Integration](#spring-boot-integration)
+- [API Reference](#api-reference)
+- [Support](#support)
+
 ## Requirements
 
 - Java 8 or higher
@@ -29,6 +61,12 @@ Add to your `build.gradle`:
 implementation 'com.renderbase:sdk:1.0.0'
 ```
 
+### Gradle (Kotlin DSL)
+
+```kotlin
+implementation("com.renderbase:sdk:1.0.0")
+```
+
 ## Quick Start
 
 ```java
@@ -36,26 +74,19 @@ import com.renderbase.Renderbase;
 import com.renderbase.models.GenerateRequest;
 import com.renderbase.models.GenerateResult;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class Example {
     public static void main(String[] args) {
         // Initialize the client
-        Renderbase client = new Renderbase("your-api-key");
-
-        // Prepare variables
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("invoiceNumber", "INV-2026-001");
-        variables.put("customerName", "Acme Corporation");
-        variables.put("amount", 1250.00);
+        Renderbase client = new Renderbase(System.getenv("RENDERBASE_API_KEY"));
 
         // Queue document generation (async operation)
         GenerateResult job = client.documents().generate(
             GenerateRequest.builder()
                 .templateId("tmpl_invoice")
                 .format("pdf")
-                .variables(variables)
+                .variable("invoiceNumber", "INV-2026-001")
+                .variable("customerName", "Acme Corporation")
+                .variable("amount", 1250.00)
                 .build()
         );
 
@@ -67,11 +98,527 @@ public class Example {
 
         if (completed.isCompleted()) {
             System.out.println("Download URL: " + completed.getDownloadUrl());
-        } else {
-            System.err.println("Job failed");
+        } else if (completed.isFailed()) {
+            System.err.println("Generation failed: " + completed.getErrorMessage());
         }
     }
 }
+```
+
+## Features
+
+- **Java 8+ compatible** - Works with modern and legacy Java versions
+- **Builder pattern** - Fluent API for constructing requests
+- **Thread-safe** - Client can be shared across threads
+- **PDF generation** - Generate PDF documents from templates
+- **Excel generation** - Generate Excel spreadsheets from templates
+- **Batch generation** - Generate multiple documents in a single request
+- **Workspace support** - Generate documents in specific workspaces
+- **Webhook verification** - Secure HMAC signature verification for incoming webhooks
+- **Polling utility** - Built-in `waitForCompletion()` method with configurable timeout
+
+## Authentication
+
+### Get an API Key
+
+1. Log in to your [Renderbase Dashboard](https://app.renderbase.dev)
+2. Navigate to **Settings** → **API Keys**
+3. Click **Create API Key**
+4. Copy the key and store it securely (it won't be shown again)
+
+### Initialize the Client
+
+```java
+import com.renderbase.Renderbase;
+import com.renderbase.models.User;
+
+// Using environment variable (recommended)
+Renderbase client = new Renderbase(System.getenv("RENDERBASE_API_KEY"));
+
+// Verify authentication
+User user = client.me();
+System.out.println("Authenticated as: " + user.getEmail());
+System.out.println("Team: " + user.getTeamName());
+```
+
+### Verify API Key
+
+```java
+// Check if API key is valid
+boolean isValid = client.verifyApiKey();
+System.out.println("API Key valid: " + isValid);
+```
+
+## Document Generation
+
+Document generation in Renderbase is **asynchronous**. When you call `generate()`, the job is queued for processing and you receive a job ID immediately. Use `waitForCompletion()` to poll until the document is ready.
+
+### Generate PDF
+
+```java
+import com.renderbase.models.GenerateRequest;
+import com.renderbase.models.GenerateResult;
+import java.util.Arrays;
+import java.util.Map;
+
+// Queue PDF generation
+GenerateResult job = client.documents().generate(
+    GenerateRequest.builder()
+        .templateId("tmpl_invoice")
+        .format("pdf")
+        .variable("invoiceNumber", "INV-001")
+        .variable("customerName", "John Doe")
+        .variable("customerEmail", "john@example.com")
+        .variable("items", Arrays.asList(
+            Map.of("description", "Product A", "quantity", 2, "price", 50.00),
+            Map.of("description", "Product B", "quantity", 1, "price", 50.00)
+        ))
+        .variable("subtotal", 150.00)
+        .variable("tax", 15.00)
+        .variable("total", 165.00)
+        .build()
+);
+
+System.out.println("Job queued: " + job.getJobId());
+System.out.println("Status: " + job.getStatus());  // "queued"
+
+// Wait for completion
+GenerateResult completed = client.documents().waitForCompletion(job.getJobId());
+System.out.println("Download URL: " + completed.getDownloadUrl());
+```
+
+### Generate Excel
+
+```java
+GenerateResult job = client.documents().generate(
+    GenerateRequest.builder()
+        .templateId("tmpl_sales_report")
+        .format("xlsx")
+        .variable("reportTitle", "Q1 2026 Sales Report")
+        .variable("reportDate", "2026-03-31")
+        .variable("salesData", Arrays.asList(
+            Map.of("region", "North", "q1", 125000),
+            Map.of("region", "South", "q1", 98000),
+            Map.of("region", "East", "q1", 145000),
+            Map.of("region", "West", "q1", 112000)
+        ))
+        .variable("totalSales", 480000)
+        .build()
+);
+
+GenerateResult completed = client.documents().waitForCompletion(job.getJobId());
+System.out.println("Excel file ready: " + completed.getDownloadUrl());
+```
+
+### Using Builder Pattern
+
+The `GenerateRequest.Builder` provides a fluent API for constructing requests:
+
+```java
+GenerateRequest request = GenerateRequest.builder()
+    // Required
+    .templateId("tmpl_contract")
+    .format("pdf")  // "pdf", "xlsx", or "csv"
+
+    // Add variables one at a time
+    .variable("contractNumber", "CTR-2026-001")
+    .variable("clientName", "Acme Corporation")
+    .variable("startDate", "2026-02-01")
+    .variable("endDate", "2027-01-31")
+
+    // Or add all variables at once
+    .variables(Map.of(
+        "terms", "Standard Terms",
+        "value", 50000.00
+    ))
+
+    // Optional settings
+    .filename("contract-acme-2026")      // Custom filename (without extension)
+    .workspaceId("ws_abc123")            // Generate in specific workspace
+    .webhookUrl("https://your-app.com/webhooks/document-ready")
+    .metadata(Map.of(                     // Custom metadata (passed to webhook)
+        "orderId", "ORD-12345",
+        "userId", "user_abc"
+    ))
+    .useDraft(false)                      // Use draft template version (for testing)
+    .useCredit(false)                     // Force use of purchased credits
+    .build();
+
+GenerateResult job = client.documents().generate(request);
+```
+
+### Wait for Completion
+
+The `waitForCompletion()` method polls the job status until it completes or fails:
+
+```java
+// Default settings (1 second interval, 30 second timeout)
+GenerateResult completed = client.documents().waitForCompletion(job.getJobId());
+
+// Custom polling settings
+GenerateResult completed = client.documents().waitForCompletion(
+    job.getJobId(),
+    2000,   // pollIntervalMs - Check every 2 seconds
+    60000   // timeoutMs - Wait up to 60 seconds
+);
+
+// Check result
+if (completed.isCompleted()) {
+    System.out.println("Download URL: " + completed.getDownloadUrl());
+    System.out.println("File size: " + completed.getFileSize() + " bytes");
+    System.out.println("Expires at: " + completed.getDownloadUrlExpiresAt());
+} else if (completed.isFailed()) {
+    System.err.println("Generation failed: " + completed.getErrorMessage());
+    System.err.println("Error code: " + completed.getErrorCode());
+}
+```
+
+### Download Document
+
+```java
+// After waiting for completion, download the document
+byte[] documentBytes = client.documents().download(completed.getDownloadUrl());
+
+// Save to file
+try (FileOutputStream fos = new FileOutputStream("document.pdf")) {
+    fos.write(documentBytes);
+    System.out.println("Document saved to document.pdf");
+}
+
+// Or process the bytes directly
+// e.g., upload to S3, attach to email, etc.
+```
+
+## Document Jobs
+
+### Get Job Status
+
+```java
+import com.renderbase.models.GenerateResult;
+
+GenerateResult job = client.documents().get("job_abc123");
+
+System.out.println("Status: " + job.getStatus());
+// Possible values: "queued", "processing", "completed", "failed"
+
+System.out.println("Template: " + job.getTemplateName());
+System.out.println("Format: " + job.getFormat());
+System.out.println("Created: " + job.getCreatedAt());
+
+if (job.isCompleted()) {
+    System.out.println("Download URL: " + job.getDownloadUrl());
+    System.out.println("File size: " + job.getFileSize());
+    System.out.println("URL expires: " + job.getDownloadUrlExpiresAt());
+}
+
+if (job.isFailed()) {
+    System.out.println("Error: " + job.getErrorMessage());
+    System.out.println("Error code: " + job.getErrorCode());
+}
+```
+
+### List Jobs
+
+```java
+import com.renderbase.models.ListResponse;
+import com.renderbase.models.GenerateResult;
+
+// List recent jobs with pagination
+ListResponse<GenerateResult> result = client.documents().list(1, 20);
+
+System.out.println("Total jobs: " + result.getMeta().getTotal());
+System.out.println("Total pages: " + result.getMeta().getTotalPages());
+
+for (GenerateResult job : result.getData()) {
+    System.out.println(job.getJobId() + ": " + job.getStatus() + " - " + job.getTemplateName());
+}
+
+// Check for more pages
+if (result.hasMore()) {
+    int nextPage = result.getMeta().getPage() + 1;
+    ListResponse<GenerateResult> nextResult = client.documents().list(nextPage, 20);
+}
+
+// Filter by template
+ListResponse<GenerateResult> invoiceJobs = client.documents().list(1, 20, "tmpl_invoice", null);
+
+// Filter by workspace
+ListResponse<GenerateResult> workspaceJobs = client.documents().list(1, 20, null, "ws_abc123");
+
+// Filter by status
+ListResponse<GenerateResult> completedJobs = client.documents().list(1, 20, null, null, "completed");
+
+// Combine filters
+ListResponse<GenerateResult> filteredJobs = client.documents().list(
+    1,              // page
+    50,             // limit
+    "tmpl_invoice", // templateId
+    "ws_abc123",    // workspaceId
+    "completed"     // status
+);
+```
+
+## Templates
+
+### List Templates
+
+```java
+import com.renderbase.models.ListResponse;
+import com.renderbase.models.Template;
+
+// List all templates
+ListResponse<Template> result = client.templates().list();
+
+System.out.println("Total templates: " + result.getMeta().getTotal());
+
+for (Template template : result.getData()) {
+    System.out.println(template.getId() + ": " + template.getName() + " (" + template.getType() + ")");
+}
+
+// Paginated list
+ListResponse<Template> page2 = client.templates().list(2, 10);
+
+// Filter by type
+ListResponse<Template> pdfTemplates = client.templates().list(1, 20, "pdf");
+ListResponse<Template> excelTemplates = client.templates().list(1, 20, "excel");
+
+// Or use convenience methods
+ListResponse<Template> pdfOnly = client.templates().listPdf();
+ListResponse<Template> excelOnly = client.templates().listExcel();
+```
+
+### Get Template Details
+
+```java
+import com.renderbase.models.Template;
+import com.renderbase.models.TemplateVariable;
+
+// Get template by ID (supports UUID, shortId, or slug)
+Template template = client.templates().get("tmpl_invoice");
+
+System.out.println("Template: " + template.getName());
+System.out.println("Type: " + template.getType());  // "pdf" or "excel"
+System.out.println("Description: " + template.getDescription());
+System.out.println("Created: " + template.getCreatedAt());
+System.out.println("Updated: " + template.getUpdatedAt());
+
+// View template variables
+if (template.getVariables() != null) {
+    System.out.println("\nVariables:");
+    for (TemplateVariable variable : template.getVariables()) {
+        System.out.println("  " + variable.getName() + " (" + variable.getType() + ")");
+        System.out.println("    Required: " + variable.isRequired());
+        if (variable.getDefaultValue() != null) {
+            System.out.println("    Default: " + variable.getDefaultValue());
+        }
+    }
+}
+```
+
+## Webhooks
+
+Webhook subscriptions are managed through the [Renderbase Dashboard](https://app.renderbase.dev). The SDK provides read-only access to view webhooks and utilities for signature verification.
+
+### List Webhooks
+
+```java
+import com.renderbase.models.ListResponse;
+import com.renderbase.resources.WebhooksResource.WebhookSubscription;
+
+ListResponse<WebhookSubscription> result = client.webhooks().list();
+
+for (WebhookSubscription webhook : result.getData()) {
+    System.out.println(webhook.getId() + ": " + webhook.getUrl());
+    System.out.println("  Events: " + String.join(", ", webhook.getEvents()));
+    System.out.println("  Active: " + webhook.isActive());
+    System.out.println("  Created: " + webhook.getCreatedAt());
+}
+```
+
+### Get Webhook Details
+
+```java
+WebhookSubscription webhook = client.webhooks().get("wh_abc123");
+
+System.out.println("URL: " + webhook.getUrl());
+System.out.println("Events: " + Arrays.toString(webhook.getEvents()));
+System.out.println("Active: " + webhook.isActive());
+System.out.println("Description: " + webhook.getDescription());
+```
+
+### Verify Webhook Signatures
+
+When receiving webhooks, always verify the signature to ensure the request came from Renderbase:
+
+```java
+import com.renderbase.resources.WebhooksResource.WebhookEvent;
+import com.renderbase.exceptions.WebhookSignatureException;
+
+// In your webhook endpoint handler (e.g., Spring Controller, Servlet)
+public void handleWebhook(HttpServletRequest request, HttpServletResponse response)
+        throws IOException {
+
+    // Read the raw request body
+    String payload = request.getReader().lines().collect(Collectors.joining());
+    String signature = request.getHeader("X-Renderbase-Signature");
+    String timestamp = request.getHeader("X-Renderbase-Timestamp");
+    String webhookSecret = System.getenv("WEBHOOK_SECRET");
+
+    try {
+        // Verify signature and construct event
+        WebhookEvent event = client.webhooks().constructEvent(
+            payload, signature, timestamp, webhookSecret
+        );
+
+        // Process the verified event
+        System.out.println("Event type: " + event.getType());
+        System.out.println("Event ID: " + event.getId());
+
+        switch (event.getType()) {
+            case "document.generated":
+                handleDocumentGenerated(event);
+                break;
+            case "document.failed":
+                handleDocumentFailed(event);
+                break;
+            case "document.downloaded":
+                handleDocumentDownloaded(event);
+                break;
+            default:
+                System.out.println("Unhandled event type: " + event.getType());
+        }
+
+        response.setStatus(200);
+        response.getWriter().write("OK");
+
+    } catch (WebhookSignatureException e) {
+        // Invalid signature - reject the webhook
+        System.err.println("Invalid webhook signature: " + e.getMessage());
+        response.setStatus(401);
+        response.getWriter().write("Invalid signature");
+    }
+}
+
+private void handleDocumentGenerated(WebhookEvent event) {
+    @SuppressWarnings("unchecked")
+    Map<String, Object> data = (Map<String, Object>) event.getData();
+
+    String jobId = (String) data.get("jobId");
+    String downloadUrl = (String) data.get("downloadUrl");
+    String templateId = (String) data.get("templateId");
+
+    System.out.println("Document " + jobId + " ready: " + downloadUrl);
+    // Download or process the document
+}
+
+private void handleDocumentFailed(WebhookEvent event) {
+    @SuppressWarnings("unchecked")
+    Map<String, Object> data = (Map<String, Object>) event.getData();
+
+    String jobId = (String) data.get("jobId");
+    String error = (String) data.get("error");
+    String errorCode = (String) data.get("errorCode");
+
+    System.err.println("Document " + jobId + " failed: " + error);
+    // Handle failure (retry, notify user, etc.)
+}
+
+private void handleDocumentDownloaded(WebhookEvent event) {
+    @SuppressWarnings("unchecked")
+    Map<String, Object> data = (Map<String, Object>) event.getData();
+
+    String jobId = (String) data.get("jobId");
+    System.out.println("Document " + jobId + " was downloaded");
+}
+```
+
+#### Spring Boot Webhook Controller
+
+```java
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import com.renderbase.Renderbase;
+import com.renderbase.resources.WebhooksResource.WebhookEvent;
+import com.renderbase.exceptions.WebhookSignatureException;
+
+@RestController
+@RequestMapping("/webhooks")
+public class WebhookController {
+
+    private final Renderbase renderbase;
+    private final String webhookSecret;
+
+    public WebhookController(Renderbase renderbase,
+                            @Value("${renderbase.webhook-secret}") String webhookSecret) {
+        this.renderbase = renderbase;
+        this.webhookSecret = webhookSecret;
+    }
+
+    @PostMapping("/renderbase")
+    public ResponseEntity<String> handleWebhook(
+            @RequestBody String payload,
+            @RequestHeader("X-Renderbase-Signature") String signature,
+            @RequestHeader("X-Renderbase-Timestamp") String timestamp) {
+
+        try {
+            WebhookEvent event = renderbase.webhooks().constructEvent(
+                payload, signature, timestamp, webhookSecret
+            );
+
+            switch (event.getType()) {
+                case "document.generated":
+                    // Handle document completion
+                    break;
+                case "document.failed":
+                    // Handle document failure
+                    break;
+            }
+
+            return ResponseEntity.ok("OK");
+
+        } catch (WebhookSignatureException e) {
+            return ResponseEntity.status(401).body("Invalid signature");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal error");
+        }
+    }
+}
+```
+
+#### Webhook Event Types
+
+| Event | Description | Payload |
+|-------|-------------|---------|
+| `document.generated` | Document successfully generated | `jobId`, `templateId`, `format`, `downloadUrl`, `fileSize` |
+| `document.failed` | Document generation failed | `jobId`, `templateId`, `error`, `errorCode` |
+| `document.downloaded` | Document was downloaded | `jobId`, `downloadedAt` |
+
+#### Webhook Headers
+
+Renderbase sends these headers with each webhook request:
+
+| Header | Description |
+|--------|-------------|
+| `X-Renderbase-Signature` | HMAC-SHA256 signature (format: `v1=<hex>`) |
+| `X-Renderbase-Timestamp` | Unix timestamp when the webhook was sent |
+| `X-Renderbase-Event-Id` | Unique event identifier |
+| `X-Renderbase-Event-Type` | Event type (e.g., `document.generated`) |
+
+#### Manual Signature Verification
+
+For advanced use cases, you can verify signatures manually:
+
+```java
+// Verify signature without constructing event
+try {
+    client.webhooks().verifySignature(payload, signature, timestamp, webhookSecret);
+    // Signature is valid
+} catch (WebhookSignatureException e) {
+    // Invalid signature
+}
+
+// Then parse the event separately
+WebhookEvent event = client.webhooks().constructEvent(payload);
 ```
 
 ## Configuration
@@ -80,10 +627,13 @@ public class Example {
 
 ```java
 // Simple initialization with API key
-Renderbase client = new Renderbase("your-api-key");
+Renderbase client = new Renderbase(System.getenv("RENDERBASE_API_KEY"));
 
 // With custom base URL
-Renderbase client = new Renderbase("your-api-key", "https://api.renderbase.dev/api/v1");
+Renderbase client = new Renderbase(
+    System.getenv("RENDERBASE_API_KEY"),
+    "https://api.renderbase.dev/api"
+);
 ```
 
 ### Advanced Configuration
@@ -92,197 +642,12 @@ Renderbase client = new Renderbase("your-api-key", "https://api.renderbase.dev/a
 import com.renderbase.RenderbaseConfig;
 
 RenderbaseConfig config = RenderbaseConfig.builder()
-    .apiKey("your-api-key")
-    .baseUrl("https://api.renderbase.dev/api/v1")
+    .apiKey(System.getenv("RENDERBASE_API_KEY"))
+    .baseUrl("https://api.renderbase.dev/api")
     .timeoutMs(60000)  // 60 seconds
     .build();
 
 Renderbase client = new Renderbase(config);
-```
-
-## Usage
-
-### Generating Documents
-
-Document generation is an **asynchronous operation**. When you call `generate()`, the job is queued for processing. Use `waitForCompletion()` to poll until the document is ready.
-
-#### Generate PDF
-
-```java
-// Queue document generation
-GenerateResult job = client.documents().generate(
-    GenerateRequest.builder()
-        .templateId("tmpl_invoice")
-        .format("pdf")
-        .variable("invoiceNumber", "INV-001")
-        .variable("customerName", "John Doe")
-        .variable("items", Arrays.asList(
-            Map.of("name", "Widget", "price", 29.99),
-            Map.of("name", "Gadget", "price", 49.99)
-        ))
-        .filename("invoice-001")
-        .build()
-);
-
-System.out.println("Job ID: " + job.getJobId());
-System.out.println("Status: " + job.getStatus());  // "queued"
-
-// Wait for completion
-GenerateResult completed = client.documents().waitForCompletion(job.getJobId());
-System.out.println("Download: " + completed.getDownloadUrl());
-```
-
-#### Generate Excel
-
-```java
-GenerateResult job = client.documents().generate(
-    GenerateRequest.builder()
-        .templateId("tmpl_report")
-        .format("xlsx")
-        .variables(reportData)
-        .build()
-);
-
-GenerateResult completed = client.documents().waitForCompletion(job.getJobId());
-```
-
-#### Custom Polling Settings
-
-```java
-// Wait with custom poll interval (2 seconds) and timeout (60 seconds)
-GenerateResult completed = client.documents().waitForCompletion(
-    job.getJobId(),
-    2000,   // pollIntervalMs
-    60000   // timeoutMs
-);
-```
-
-#### Download Document
-
-```java
-// After waiting for completion
-byte[] documentBytes = client.documents().download(completed.getDownloadUrl());
-
-// Save to file
-try (FileOutputStream fos = new FileOutputStream("document.pdf")) {
-    fos.write(documentBytes);
-}
-```
-
-### Working with Templates
-
-#### List Templates
-
-```java
-import com.renderbase.models.ListResponse;
-import com.renderbase.models.Template;
-
-ListResponse<Template> templates = client.templates().list();
-
-for (Template template : templates.getData()) {
-    System.out.println(template.getName() + " (" + template.getId() + ")");
-    System.out.println("  Type: " + template.getType());
-    System.out.println("  Variables: " + template.getVariables().size());
-}
-
-// Check for more pages
-if (templates.hasMore()) {
-    int nextPage = templates.getMeta().getPage() + 1;
-    ListResponse<Template> nextTemplates = client.templates().list(nextPage, 10);
-}
-```
-
-#### Get Template Details
-
-```java
-// By ID
-Template template = client.templates().get("550e8400-e29b-41d4-a716-446655440000");
-
-// By short ID
-Template template = client.templates().getByShortId("tmpl_abc123");
-
-// By slug
-Template template = client.templates().getBySlug("invoice-template");
-
-// Access template variables
-for (TemplateVariable variable : template.getVariables()) {
-    System.out.println(variable.getName() + " (" + variable.getType() + ")");
-    System.out.println("  Required: " + variable.isRequired());
-    if (variable.getDefaultValue() != null) {
-        System.out.println("  Default: " + variable.getDefaultValue());
-    }
-}
-```
-
-### Webhook Handling
-
-#### Verify Webhook Signatures
-
-```java
-import com.renderbase.resources.WebhooksResource.WebhookEvent;
-import com.renderbase.exceptions.WebhookSignatureException;
-
-// In your webhook endpoint handler
-public void handleWebhook(HttpServletRequest request) {
-    String payload = readRequestBody(request);
-    String signature = request.getHeader("X-Renderbase-Signature");
-    String timestamp = request.getHeader("X-Renderbase-Timestamp");
-    String webhookSecret = "whsec_your_webhook_secret";
-
-    try {
-        // Verify and construct event
-        WebhookEvent event = client.webhooks().constructEvent(
-            payload, signature, timestamp, webhookSecret
-        );
-
-        // Handle different event types
-        switch (event.getType()) {
-            case "document.completed":
-                handleDocumentCompleted(event);
-                break;
-            case "document.failed":
-                handleDocumentFailed(event);
-                break;
-            case "batch.completed":
-                handleBatchCompleted(event);
-                break;
-            default:
-                System.out.println("Unhandled event type: " + event.getType());
-        }
-    } catch (WebhookSignatureException e) {
-        // Invalid signature - reject the webhook
-        response.setStatus(401);
-        return;
-    }
-}
-```
-
-#### Manage Webhook Subscriptions
-
-```java
-import com.renderbase.resources.WebhooksResource.*;
-
-// Create a webhook subscription
-WebhookSubscription webhook = client.webhooks().create(
-    new CreateWebhookRequest(
-        "https://your-server.com/webhooks/renderbase",
-        new String[]{"document.completed", "document.failed", "batch.completed"}
-    )
-);
-
-System.out.println("Webhook ID: " + webhook.getId());
-System.out.println("Secret: " + webhook.getSecret());  // Save this securely!
-
-// List webhooks
-ListResponse<WebhookSubscription> webhooks = client.webhooks().list();
-
-// Update webhook
-UpdateWebhookRequest update = new UpdateWebhookRequest();
-update.setActive(false);
-client.webhooks().update(webhook.getId(), update);
-
-// Delete webhook
-client.webhooks().delete(webhook.getId());
 ```
 
 ## Error Handling
@@ -298,48 +663,117 @@ try {
     System.err.println("Status Code: " + e.getStatusCode());
 
     // Handle specific error codes
-    if ("ERR_TMPL_001".equals(e.getCode())) {
-        System.err.println("Template not found");
-    } else if ("ERR_QUOTA_001".equals(e.getCode())) {
-        System.err.println("Quota exceeded - please upgrade your plan");
+    switch (e.getCode()) {
+        case "ERR_TMPL_001":
+            System.err.println("Template not found");
+            break;
+        case "ERR_TMPL_003":
+            System.err.println("Template validation failed");
+            break;
+        case "ERR_QUOTA_001":
+            System.err.println("Document quota exceeded - upgrade your plan");
+            break;
+        case "ERR_AUTH_001":
+            System.err.println("Invalid API key");
+            break;
+        case "ERR_AUTH_004":
+            System.err.println("API key expired or revoked");
+            break;
+        default:
+            System.err.println("Unknown error");
     }
 }
 ```
 
+### Common Error Codes
+
+| Code | Description |
+|------|-------------|
+| `ERR_AUTH_001` | Invalid credentials / API key |
+| `ERR_AUTH_004` | Token expired or revoked |
+| `ERR_TMPL_001` | Template not found |
+| `ERR_TMPL_003` | Template validation failed |
+| `ERR_DOC_001` | Document job not found |
+| `ERR_DOC_004` | Document generation failed |
+| `ERR_QUOTA_001` | Document quota exceeded |
+| `ERR_QUOTA_002` | Rate limit exceeded |
+
 ## Thread Safety
 
-The `Renderbase` client is thread-safe and can be shared across multiple threads. We recommend creating a single instance and reusing it throughout your application.
+The `Renderbase` client is **thread-safe** and can be shared across multiple threads. We recommend creating a single instance and reusing it throughout your application.
 
 ```java
-// Application-wide singleton
+// Application-wide singleton pattern
 public class RenderbaseClient {
-    private static final Renderbase INSTANCE = new Renderbase(
-        System.getenv("RENDERBASE_API_KEY")
-    );
+    private static final Renderbase INSTANCE;
+
+    static {
+        INSTANCE = new Renderbase(System.getenv("RENDERBASE_API_KEY"));
+    }
 
     public static Renderbase getInstance() {
         return INSTANCE;
     }
+
+    private RenderbaseClient() {} // Prevent instantiation
 }
+
+// Usage from any thread
+GenerateResult job = RenderbaseClient.getInstance().documents().generate(request);
 ```
 
 ## Spring Boot Integration
 
+### Configuration Class
+
 ```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
+import com.renderbase.Renderbase;
+import com.renderbase.RenderbaseConfig;
+
 @Configuration
 public class RenderbaseConfiguration {
 
     @Value("${renderbase.api-key}")
     private String apiKey;
 
-    @Value("${renderbase.base-url:https://api.renderbase.dev/api/v1}")
+    @Value("${renderbase.base-url:https://api.renderbase.dev/api}")
     private String baseUrl;
+
+    @Value("${renderbase.timeout-ms:30000}")
+    private int timeoutMs;
 
     @Bean
     public Renderbase renderbase() {
-        return new Renderbase(apiKey, baseUrl);
+        RenderbaseConfig config = RenderbaseConfig.builder()
+            .apiKey(apiKey)
+            .baseUrl(baseUrl)
+            .timeoutMs(timeoutMs)
+            .build();
+        return new Renderbase(config);
     }
 }
+```
+
+### Application Properties
+
+```properties
+# application.properties
+renderbase.api-key=${RENDERBASE_API_KEY}
+renderbase.base-url=https://api.renderbase.dev/api
+renderbase.timeout-ms=30000
+renderbase.webhook-secret=${WEBHOOK_SECRET}
+```
+
+### Service Example
+
+```java
+import org.springframework.stereotype.Service;
+import com.renderbase.Renderbase;
+import com.renderbase.models.GenerateRequest;
+import com.renderbase.models.GenerateResult;
 
 @Service
 public class DocumentService {
@@ -358,7 +792,11 @@ public class DocumentService {
                 .format("pdf")
                 .variable("invoiceNumber", invoice.getNumber())
                 .variable("customerName", invoice.getCustomer().getName())
+                .variable("customerEmail", invoice.getCustomer().getEmail())
                 .variable("lineItems", invoice.getLineItems())
+                .variable("subtotal", invoice.getSubtotal())
+                .variable("tax", invoice.getTax())
+                .variable("total", invoice.getTotal())
                 .build()
         );
 
@@ -366,10 +804,42 @@ public class DocumentService {
         GenerateResult completed = renderbase.documents().waitForCompletion(job.getJobId());
 
         if (completed.isFailed()) {
-            throw new RuntimeException("Document generation failed");
+            throw new RuntimeException("Document generation failed: " + completed.getErrorMessage());
         }
 
         return completed.getDownloadUrl();
+    }
+
+    public byte[] downloadDocument(String downloadUrl) {
+        return renderbase.documents().download(downloadUrl);
+    }
+}
+```
+
+### Controller Example
+
+```java
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+
+@RestController
+@RequestMapping("/api/invoices")
+public class InvoiceController {
+
+    private final DocumentService documentService;
+
+    public InvoiceController(DocumentService documentService) {
+        this.documentService = documentService;
+    }
+
+    @PostMapping("/{id}/generate-pdf")
+    public ResponseEntity<Map<String, String>> generatePdf(@PathVariable Long id) {
+        Invoice invoice = invoiceRepository.findById(id)
+            .orElseThrow(() -> new NotFoundException("Invoice not found"));
+
+        String downloadUrl = documentService.generateInvoice(invoice);
+
+        return ResponseEntity.ok(Map.of("downloadUrl", downloadUrl));
     }
 }
 ```
@@ -378,46 +848,52 @@ public class DocumentService {
 
 ### Renderbase
 
-| Method | Description |
-|--------|-------------|
-| `documents()` | Access document generation operations |
-| `templates()` | Access template operations |
-| `webhooks()` | Access webhook operations |
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `me()` | `User` | Get current authenticated user |
+| `verifyApiKey()` | `boolean` | Verify API key is valid |
+| `documents()` | `DocumentsResource` | Access document generation operations |
+| `templates()` | `TemplatesResource` | Access template operations |
+| `webhooks()` | `WebhooksResource` | Access webhook operations |
 
 ### DocumentsResource
 
-| Method | Description |
-|--------|-------------|
-| `generate(request)` | Queue document generation (returns job with `queued` status) |
-| `get(jobId)` | Get a document generation job by ID |
-| `list()` | List document generation jobs |
-| `list(page, limit)` | List with pagination |
-| `list(page, limit, templateId, workspaceId)` | List with filters |
-| `waitForCompletion(jobId)` | Poll until job completes (default: 1s interval, 30s timeout) |
-| `waitForCompletion(jobId, pollIntervalMs, timeoutMs)` | Poll with custom settings |
-| `delete(jobId)` | Delete a generated document |
-| `download(url)` | Download document as bytes |
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `generate(request)` | `GenerateResult` | Queue document generation |
+| `get(jobId)` | `GenerateResult` | Get document job by ID |
+| `list()` | `ListResponse<GenerateResult>` | List document jobs |
+| `list(page, limit)` | `ListResponse<GenerateResult>` | List with pagination |
+| `list(page, limit, templateId, workspaceId)` | `ListResponse<GenerateResult>` | List with filters |
+| `list(page, limit, templateId, workspaceId, status)` | `ListResponse<GenerateResult>` | List with all filters |
+| `waitForCompletion(jobId)` | `GenerateResult` | Poll until job completes (default timeout) |
+| `waitForCompletion(jobId, pollIntervalMs, timeoutMs)` | `GenerateResult` | Poll with custom settings |
+| `delete(jobId)` | `void` | Delete a generated document |
+| `download(url)` | `byte[]` | Download document as bytes |
 
 ### TemplatesResource
 
-| Method | Description |
-|--------|-------------|
-| `list()` | List all templates |
-| `list(page, limit)` | List with pagination |
-| `list(page, limit, type)` | List with filtering |
-| `get(templateId)` | Get template by ID/shortId/slug |
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `list()` | `ListResponse<Template>` | List all templates |
+| `list(page, limit)` | `ListResponse<Template>` | List with pagination |
+| `list(page, limit, type)` | `ListResponse<Template>` | List with type filter ("pdf" or "excel") |
+| `listPdf()` | `ListResponse<Template>` | List PDF templates only |
+| `listPdf(page, limit)` | `ListResponse<Template>` | List PDF templates with pagination |
+| `listExcel()` | `ListResponse<Template>` | List Excel templates only |
+| `listExcel(page, limit)` | `ListResponse<Template>` | List Excel templates with pagination |
+| `get(templateId)` | `Template` | Get template by ID (UUID, shortId, or slug) |
 
 ### WebhooksResource
 
-| Method | Description |
-|--------|-------------|
-| `list()` | List webhook subscriptions |
-| `get(webhookId)` | Get webhook by ID |
-| `create(request)` | Create webhook subscription |
-| `update(webhookId, request)` | Update webhook |
-| `delete(webhookId)` | Delete webhook |
-| `verifySignature(...)` | Verify webhook signature |
-| `constructEvent(payload)` | Parse webhook event |
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `list()` | `ListResponse<WebhookSubscription>` | List webhook subscriptions |
+| `list(page, limit)` | `ListResponse<WebhookSubscription>` | List with pagination |
+| `get(webhookId)` | `WebhookSubscription` | Get webhook by ID |
+| `verifySignature(payload, signature, timestamp, secret)` | `void` | Verify webhook signature (throws on failure) |
+| `constructEvent(payload)` | `WebhookEvent` | Parse webhook event from payload |
+| `constructEvent(payload, signature, timestamp, secret)` | `WebhookEvent` | Verify and parse webhook event |
 
 ## License
 
@@ -425,6 +901,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- Documentation: https://docs.renderbase.dev
-- API Reference: https://docs.renderbase.dev/api
-- Email: support@renderbase.dev
+- **Documentation**: https://docs.renderbase.dev/sdk/java
+- **API Reference**: https://docs.renderbase.dev/api
+- **GitHub Issues**: https://github.com/renderbase/sdk-java/issues
+- **Email**: support@renderbase.dev
