@@ -224,6 +224,30 @@ public class HttpClient {
     }
 
     /**
+     * Makes a GET request to an absolute URL with query parameters.
+     */
+    public <T> T getAbsolute(String absoluteUrl, Map<String, String> queryParams, TypeReference<T> typeReference) throws RenderbaseException {
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(absoluteUrl).newBuilder();
+        if (queryParams != null) {
+            for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+                if (entry.getValue() != null) {
+                    urlBuilder.addQueryParameter(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        Request request = new Request.Builder()
+                .url(urlBuilder.build())
+                .get()
+                .addHeader("Authorization", "Bearer " + apiKey)
+                .addHeader("User-Agent", USER_AGENT)
+                .addHeader("Accept", "application/json")
+                .build();
+
+        return execute(request, typeReference);
+    }
+
+    /**
      * Gets the base URL without the /api/v1 suffix (for auth endpoints).
      */
     public String getBaseUrlWithoutVersion() {

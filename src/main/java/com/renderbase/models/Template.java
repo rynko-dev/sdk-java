@@ -25,6 +25,9 @@ public class Template {
     @JsonProperty("type")
     private String type;
 
+    @JsonProperty("outputFormats")
+    private List<String> outputFormats;
+
     @JsonProperty("variables")
     private List<TemplateVariable> variables;
 
@@ -75,6 +78,14 @@ public class Template {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public List<String> getOutputFormats() {
+        return outputFormats;
+    }
+
+    public void setOutputFormats(List<String> outputFormats) {
+        this.outputFormats = outputFormats;
     }
 
     public List<TemplateVariable> getVariables() {

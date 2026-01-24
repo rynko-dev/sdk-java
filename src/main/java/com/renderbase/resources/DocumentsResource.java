@@ -1,13 +1,16 @@
 package com.renderbase.resources;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.renderbase.exceptions.RenderbaseException;
 import com.renderbase.models.GenerateRequest;
 import com.renderbase.models.GenerateResult;
 import com.renderbase.models.ListResponse;
+import com.renderbase.models.PaginationMeta;
 import com.renderbase.utils.HttpClient;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -76,7 +79,7 @@ public class DocumentsResource {
      * @throws RenderbaseException if the request fails
      */
     public ListResponse<GenerateResult> list() throws RenderbaseException {
-        return list(null, null, null, null);
+        return list(null, null, null, null, null);
     }
 
     /**
@@ -88,7 +91,7 @@ public class DocumentsResource {
      * @throws RenderbaseException if the request fails
      */
     public ListResponse<GenerateResult> list(Integer page, Integer limit) throws RenderbaseException {
-        return list(page, limit, null, null);
+        return list(page, limit, null, null, null);
     }
 
     /**
@@ -102,21 +105,69 @@ public class DocumentsResource {
      * @throws RenderbaseException if the request fails
      */
     public ListResponse<GenerateResult> list(Integer page, Integer limit, String templateId, String workspaceId) throws RenderbaseException {
+        return list(page, limit, templateId, workspaceId, null);
+    }
+
+    /**
+     * Lists document generation jobs with pagination and filtering.
+     *
+     * @param page        Page number (1-based)
+     * @param limit       Number of items per page
+     * @param templateId  Filter by template ID
+     * @param workspaceId Filter by workspace ID
+     * @param status      Filter by status (queued, processing, completed, failed)
+     * @return Paginated list of generation results
+     * @throws RenderbaseException if the request fails
+     */
+    public ListResponse<GenerateResult> list(Integer page, Integer limit, String templateId, String workspaceId, String status) throws RenderbaseException {
+        int effectiveLimit = limit != null ? limit : 20;
+        int effectivePage = page != null ? page : 1;
+        int offset = (effectivePage - 1) * effectiveLimit;
+
         Map<String, String> params = new HashMap<>();
-        if (page != null) {
-            params.put("page", page.toString());
-        }
-        if (limit != null) {
-            params.put("limit", limit.toString());
-        }
+        params.put("limit", String.valueOf(effectiveLimit));
+        params.put("offset", String.valueOf(offset));
         if (templateId != null) {
             params.put("templateId", templateId);
         }
         if (workspaceId != null) {
             params.put("workspaceId", workspaceId);
         }
+        if (status != null) {
+            params.put("status", status);
+        }
 
-        return httpClient.get("/documents/jobs", params, new TypeReference<ListResponse<GenerateResult>>() {});
+        // Backend returns { jobs: [], total: number }
+        JobsListResponse response = httpClient.get("/documents/jobs", params, new TypeReference<JobsListResponse>() {});
+
+        // Convert to ListResponse format
+        ListResponse<GenerateResult> result = new ListResponse<>();
+        result.setData(response.getJobs());
+
+        PaginationMeta meta = new PaginationMeta();
+        meta.setTotal(response.getTotal());
+        meta.setPage(effectivePage);
+        meta.setLimit(effectiveLimit);
+        meta.setTotalPages(effectiveLimit > 0 ? (response.getTotal() + effectiveLimit - 1) / effectiveLimit : 1);
+        result.setMeta(meta);
+
+        return result;
+    }
+
+    /**
+     * Internal class to parse backend response format.
+     */
+    private static class JobsListResponse {
+        @JsonProperty("jobs")
+        private List<GenerateResult> jobs;
+
+        @JsonProperty("total")
+        private int total;
+
+        public List<GenerateResult> getJobs() { return jobs; }
+        public void setJobs(List<GenerateResult> jobs) { this.jobs = jobs; }
+        public int getTotal() { return total; }
+        public void setTotal(int total) { this.total = total; }
     }
 
     /**

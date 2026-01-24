@@ -1,9 +1,11 @@
 package com.renderbase.resources;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.renderbase.exceptions.RenderbaseException;
 import com.renderbase.exceptions.WebhookSignatureException;
 import com.renderbase.models.ListResponse;
+import com.renderbase.models.PaginationMeta;
 import com.renderbase.utils.HttpClient;
 
 import javax.crypto.Mac;
@@ -12,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -66,15 +69,44 @@ public class WebhooksResource {
      * @throws RenderbaseException if the request fails
      */
     public ListResponse<WebhookSubscription> list(Integer page, Integer limit) throws RenderbaseException {
-        Map<String, String> params = new HashMap<>();
-        if (page != null) {
-            params.put("page", page.toString());
-        }
-        if (limit != null) {
-            params.put("limit", limit.toString());
-        }
+        int effectiveLimit = limit != null ? limit : 20;
+        int effectivePage = page != null ? page : 1;
 
-        return httpClient.get("/webhook-subscriptions", params, new TypeReference<ListResponse<WebhookSubscription>>() {});
+        Map<String, String> params = new HashMap<>();
+        params.put("page", String.valueOf(effectivePage));
+        params.put("limit", String.valueOf(effectiveLimit));
+
+        // Backend returns { data: [], total: number }
+        WebhooksListResponse response = httpClient.get("/webhook-subscriptions", params, new TypeReference<WebhooksListResponse>() {});
+
+        // Convert to ListResponse format
+        ListResponse<WebhookSubscription> result = new ListResponse<>();
+        result.setData(response.getData());
+
+        PaginationMeta meta = new PaginationMeta();
+        meta.setTotal(response.getTotal());
+        meta.setPage(effectivePage);
+        meta.setLimit(effectiveLimit);
+        meta.setTotalPages(effectiveLimit > 0 ? (response.getTotal() + effectiveLimit - 1) / effectiveLimit : 1);
+        result.setMeta(meta);
+
+        return result;
+    }
+
+    /**
+     * Internal class to parse backend response format.
+     */
+    private static class WebhooksListResponse {
+        @JsonProperty("data")
+        private List<WebhookSubscription> data;
+
+        @JsonProperty("total")
+        private int total;
+
+        public List<WebhookSubscription> getData() { return data; }
+        public void setData(List<WebhookSubscription> data) { this.data = data; }
+        public int getTotal() { return total; }
+        public void setTotal(int total) { this.total = total; }
     }
 
     /**

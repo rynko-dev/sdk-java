@@ -3,11 +3,14 @@ package com.renderbase.resources;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.renderbase.exceptions.RenderbaseException;
 import com.renderbase.models.ListResponse;
+import com.renderbase.models.PaginationMeta;
 import com.renderbase.models.Template;
 import com.renderbase.utils.HttpClient;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Resource for template operations.
@@ -21,6 +24,9 @@ import java.util.Map;
  * for (Template template : templates.getData()) {
  *     System.out.println(template.getName() + ": " + template.getId());
  * }
+ *
+ * // List only PDF templates
+ * ListResponse<Template> pdfTemplates = client.templates().listPdf();
  *
  * // Get a specific template
  * Template template = client.templates().get("tmpl_invoice");
@@ -60,15 +66,15 @@ public class TemplatesResource {
     }
 
     /**
-     * Lists templates with pagination and filtering.
+     * Lists templates with pagination and search.
      *
-     * @param page  Page number (1-based)
-     * @param limit Number of items per page
-     * @param type  Filter by template type (e.g., "pdf", "excel")
+     * @param page   Page number (1-based)
+     * @param limit  Number of items per page
+     * @param search Search by template name
      * @return Paginated list of templates
      * @throws RenderbaseException if the request fails
      */
-    public ListResponse<Template> list(Integer page, Integer limit, String type) throws RenderbaseException {
+    public ListResponse<Template> list(Integer page, Integer limit, String search) throws RenderbaseException {
         Map<String, String> params = new HashMap<>();
         if (page != null) {
             params.put("page", page.toString());
@@ -76,11 +82,72 @@ public class TemplatesResource {
         if (limit != null) {
             params.put("limit", limit.toString());
         }
-        if (type != null) {
-            params.put("type", type);
+        if (search != null) {
+            params.put("search", search);
         }
 
-        return httpClient.get("/templates", params, new TypeReference<ListResponse<Template>>() {});
+        // Templates use non-versioned API: /api/templates/attachment
+        String url = httpClient.getBaseUrlWithoutVersion() + "/api/templates/attachment";
+        return httpClient.getAbsolute(url, params, new TypeReference<ListResponse<Template>>() {});
+    }
+
+    /**
+     * Lists PDF templates (client-side filter by outputFormats).
+     *
+     * @return Paginated list of PDF templates
+     * @throws RenderbaseException if the request fails
+     */
+    public ListResponse<Template> listPdf() throws RenderbaseException {
+        return listPdf(null, null);
+    }
+
+    /**
+     * Lists PDF templates with pagination (client-side filter by outputFormats).
+     *
+     * @param page  Page number (1-based)
+     * @param limit Number of items per page
+     * @return Paginated list of PDF templates
+     * @throws RenderbaseException if the request fails
+     */
+    public ListResponse<Template> listPdf(Integer page, Integer limit) throws RenderbaseException {
+        ListResponse<Template> result = list(page, limit);
+        if (result.getData() != null) {
+            List<Template> filtered = result.getData().stream()
+                    .filter(t -> t.getOutputFormats() != null && t.getOutputFormats().contains("pdf"))
+                    .collect(Collectors.toList());
+            result.setData(filtered);
+        }
+        return result;
+    }
+
+    /**
+     * Lists Excel templates (client-side filter by outputFormats).
+     *
+     * @return Paginated list of Excel templates
+     * @throws RenderbaseException if the request fails
+     */
+    public ListResponse<Template> listExcel() throws RenderbaseException {
+        return listExcel(null, null);
+    }
+
+    /**
+     * Lists Excel templates with pagination (client-side filter by outputFormats).
+     *
+     * @param page  Page number (1-based)
+     * @param limit Number of items per page
+     * @return Paginated list of Excel templates
+     * @throws RenderbaseException if the request fails
+     */
+    public ListResponse<Template> listExcel(Integer page, Integer limit) throws RenderbaseException {
+        ListResponse<Template> result = list(page, limit);
+        if (result.getData() != null) {
+            List<Template> filtered = result.getData().stream()
+                    .filter(t -> t.getOutputFormats() != null &&
+                            (t.getOutputFormats().contains("xlsx") || t.getOutputFormats().contains("excel")))
+                    .collect(Collectors.toList());
+            result.setData(filtered);
+        }
+        return result;
     }
 
     /**
@@ -91,7 +158,9 @@ public class TemplatesResource {
      * @throws RenderbaseException if the request fails
      */
     public Template get(String templateId) throws RenderbaseException {
-        return httpClient.get("/templates/" + templateId, Template.class);
+        // Templates use non-versioned API: /api/templates/{id}
+        String url = httpClient.getBaseUrlWithoutVersion() + "/api/templates/" + templateId;
+        return httpClient.getAbsolute(url, Template.class);
     }
 
     /**
