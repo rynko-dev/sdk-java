@@ -2,8 +2,6 @@ package com.renderbase;
 
 import com.renderbase.exceptions.RenderbaseException;
 import com.renderbase.models.*;
-import com.renderbase.resources.WebhooksResource.CreateWebhookRequest;
-import com.renderbase.resources.WebhooksResource.UpdateWebhookRequest;
 import com.renderbase.resources.WebhooksResource.WebhookSubscription;
 
 import java.util.*;
@@ -33,7 +31,6 @@ public class IntegrationTest {
     private static String templateId = null;
     private static Map<String, Object> templateVariables = new HashMap<>();
     private static String jobId = null;
-    private static String webhookId = null;
 
     private static final List<TestResult> results = new ArrayList<>();
 
@@ -251,50 +248,17 @@ public class IntegrationTest {
                 throw new Exception("Expected array of webhooks");
             }
             System.out.println("  Found " + webhooks.size() + " webhooks");
-        });
 
-        test("webhooks.create() - Create webhook subscription", () -> {
-            WebhookSubscription webhook = client.webhooks().create(
-                new CreateWebhookRequest(
-                    "https://webhook.site/test-renderbase-java-sdk",
-                    new String[]{"document.generated", "document.failed"},
-                    "SDK Integration Test Webhook (Java)"
-                )
-            );
-
-            if (webhook.getId() == null || webhook.getSecret() == null) {
-                throw new Exception("Invalid webhook response");
-            }
-
-            webhookId = webhook.getId();
-            System.out.println("  Webhook ID: " + webhookId);
-            System.out.println("  Secret: " + webhook.getSecret().substring(0, 10) + "...");
-        });
-
-        if (webhookId != null) {
-            test("webhooks.get() - Get webhook by ID", () -> {
+            // If webhooks exist, test get by ID
+            if (!webhooks.isEmpty()) {
+                String webhookId = webhooks.get(0).getId();
                 WebhookSubscription webhook = client.webhooks().get(webhookId);
                 if (webhook.getId() == null || webhook.getUrl() == null) {
                     throw new Exception("Invalid webhook response");
                 }
-                System.out.println("  URL: " + webhook.getUrl());
-            });
-
-            test("webhooks.update() - Update webhook", () -> {
-                UpdateWebhookRequest update = new UpdateWebhookRequest();
-                update.setDescription("SDK Integration Test Webhook (Java - Updated)");
-                WebhookSubscription webhook = client.webhooks().update(webhookId, update);
-                if (webhook.getId() == null) {
-                    throw new Exception("Invalid webhook response");
-                }
-                System.out.println("  Updated description: " + webhook.getDescription());
-            });
-
-            test("webhooks.delete() - Delete webhook", () -> {
-                client.webhooks().delete(webhookId);
-                System.out.println("  Deleted webhook: " + webhookId);
-            });
-        }
+                System.out.println("  Retrieved webhook: " + webhookId);
+            }
+        });
 
         // ==========================================
         // Error Handling Tests

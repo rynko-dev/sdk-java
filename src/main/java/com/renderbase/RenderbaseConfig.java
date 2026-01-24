@@ -57,6 +57,15 @@ public class RenderbaseConfig {
     }
 
     /**
+     * Creates a new configuration builder.
+     *
+     * @return A new Builder instance
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
      * Builder for RenderbaseConfig.
      */
     public static class Builder {

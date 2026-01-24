@@ -37,7 +37,7 @@ public class RenderbaseTest {
     @Test
     void testClientCreationWithoutApiKey() {
         assertThrows(IllegalArgumentException.class, () -> {
-            new Renderbase(null);
+            new Renderbase((String) null);
         });
     }
 

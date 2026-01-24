@@ -49,7 +49,7 @@ public class WebhookSignatureTest {
     }
 
     @Test
-    void testExpiredTimestamp() {
+    void testExpiredTimestamp() throws Exception {
         String payload = "{\"type\":\"document.completed\"}";
         // Timestamp from 10 minutes ago (beyond 5 minute tolerance)
         String timestamp = String.valueOf((System.currentTimeMillis() / 1000) - 600);
@@ -61,7 +61,7 @@ public class WebhookSignatureTest {
     }
 
     @Test
-    void testFutureTimestamp() {
+    void testFutureTimestamp() throws Exception {
         String payload = "{\"type\":\"document.completed\"}";
         // Timestamp from 10 minutes in the future (beyond 5 minute tolerance)
         String timestamp = String.valueOf((System.currentTimeMillis() / 1000) + 600);
