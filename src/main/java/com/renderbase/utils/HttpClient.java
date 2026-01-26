@@ -12,10 +12,12 @@ import okhttp3.*;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /**
- * HTTP client for making requests to the Renderbase API.
+ * HTTP client for making requests to the Renderbase API with automatic retry
+ * and exponential backoff.
  */
 public class HttpClient {
 
@@ -26,10 +28,14 @@ public class HttpClient {
     private final ObjectMapper objectMapper;
     private final String baseUrl;
     private final String apiKey;
+    private final RenderbaseConfig config;
+    private final Random random;
 
     public HttpClient(RenderbaseConfig config) {
         this.baseUrl = config.getBaseUrl();
         this.apiKey = config.getApiKey();
+        this.config = config;
+        this.random = new Random();
 
         this.client = new OkHttpClient.Builder()
                 .connectTimeout(config.getTimeoutMs(), TimeUnit.MILLISECONDS)
@@ -41,6 +47,54 @@ public class HttpClient {
                 .registerModule(new JavaTimeModule())
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+    }
+
+    /**
+     * Calculate delay for exponential backoff with jitter.
+     */
+    private long calculateDelay(int attempt, Long retryAfterMs) {
+        // If server specified Retry-After, respect it (with jitter)
+        if (retryAfterMs != null) {
+            long jitter = (long) (random.nextDouble() * config.getMaxJitterMs());
+            return Math.min(retryAfterMs + jitter, config.getMaxDelayMs());
+        }
+
+        // Exponential backoff: initialDelay * 2^attempt
+        long exponentialDelay = config.getInitialDelayMs() * (long) Math.pow(2, attempt);
+
+        // Add random jitter to prevent thundering herd
+        long jitter = (long) (random.nextDouble() * config.getMaxJitterMs());
+
+        // Cap at maxDelay
+        return Math.min(exponentialDelay + jitter, config.getMaxDelayMs());
+    }
+
+    /**
+     * Parse Retry-After header value to milliseconds.
+     */
+    private Long parseRetryAfter(String retryAfter) {
+        if (retryAfter == null || retryAfter.isEmpty()) {
+            return null;
+        }
+
+        // Try to parse as integer (seconds)
+        try {
+            return Long.parseLong(retryAfter) * 1000;
+        } catch (NumberFormatException ignored) {
+        }
+
+        // HTTP-date parsing is complex and rarely used, so we skip it
+        return null;
+    }
+
+    /**
+     * Check if the status code should trigger a retry.
+     */
+    private boolean shouldRetry(int statusCode) {
+        if (!config.isRetryEnabled()) {
+            return false;
+        }
+        return config.getRetryableStatuses().contains(statusCode);
     }
 
     /**
@@ -71,7 +125,7 @@ public class HttpClient {
                 .addHeader("Accept", "application/json")
                 .build();
 
-        return execute(request, responseType);
+        return executeWithRetry(request, responseType);
     }
 
     /**
@@ -95,7 +149,7 @@ public class HttpClient {
                 .addHeader("Accept", "application/json")
                 .build();
 
-        return execute(request, typeReference);
+        return executeWithRetry(request, typeReference);
     }
 
     /**
@@ -122,7 +176,7 @@ public class HttpClient {
                     .addHeader("Accept", "application/json")
                     .build();
 
-            return execute(request, typeReference);
+            return executeWithRetry(request, typeReference);
         } catch (IOException e) {
             throw new RenderbaseException("Failed to serialize request body", e);
         }
@@ -142,7 +196,7 @@ public class HttpClient {
                     .addHeader("Accept", "application/json")
                     .build();
 
-            return execute(request, responseType);
+            return executeWithRetry(request, responseType);
         } catch (IOException e) {
             throw new RenderbaseException("Failed to serialize request body", e);
         }
@@ -165,7 +219,7 @@ public class HttpClient {
                     .addHeader("Accept", "application/json")
                     .build();
 
-            return execute(request, responseType);
+            return executeWithRetry(request, responseType);
         } catch (IOException e) {
             throw new RenderbaseException("Failed to serialize request body", e);
         }
@@ -188,7 +242,7 @@ public class HttpClient {
                     .addHeader("Accept", "application/json")
                     .build();
 
-            return execute(request, responseType);
+            return executeWithRetry(request, responseType);
         } catch (IOException e) {
             throw new RenderbaseException("Failed to serialize request body", e);
         }
@@ -205,7 +259,7 @@ public class HttpClient {
                 .addHeader("User-Agent", USER_AGENT)
                 .build();
 
-        executeVoid(request);
+        executeVoidWithRetry(request);
     }
 
     /**
@@ -220,7 +274,7 @@ public class HttpClient {
                 .addHeader("Accept", "application/json")
                 .build();
 
-        return execute(request, responseType);
+        return executeWithRetry(request, responseType);
     }
 
     /**
@@ -244,7 +298,7 @@ public class HttpClient {
                 .addHeader("Accept", "application/json")
                 .build();
 
-        return execute(request, typeReference);
+        return executeWithRetry(request, typeReference);
     }
 
     /**
@@ -257,50 +311,145 @@ public class HttpClient {
         return baseUrl;
     }
 
-    private <T> T execute(Request request, Class<T> responseType) throws RenderbaseException {
-        try (Response response = client.newCall(request).execute()) {
-            String responseBody = response.body() != null ? response.body().string() : "";
+    private <T> T executeWithRetry(Request request, Class<T> responseType) throws RenderbaseException {
+        int maxAttempts = config.isRetryEnabled() ? config.getMaxRetries() : 1;
+        RenderbaseException lastError = null;
 
-            if (!response.isSuccessful()) {
-                handleError(response.code(), responseBody);
-            }
-
-            if (responseType == Void.class || responseBody.isEmpty()) {
-                return null;
-            }
-
-            return objectMapper.readValue(responseBody, responseType);
-        } catch (IOException e) {
-            throw new RenderbaseException("Request failed", e);
-        }
-    }
-
-    private <T> T execute(Request request, TypeReference<T> typeReference) throws RenderbaseException {
-        try (Response response = client.newCall(request).execute()) {
-            String responseBody = response.body() != null ? response.body().string() : "";
-
-            if (!response.isSuccessful()) {
-                handleError(response.code(), responseBody);
-            }
-
-            if (responseBody.isEmpty()) {
-                return null;
-            }
-
-            return objectMapper.readValue(responseBody, typeReference);
-        } catch (IOException e) {
-            throw new RenderbaseException("Request failed", e);
-        }
-    }
-
-    private void executeVoid(Request request) throws RenderbaseException {
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            try (Response response = client.newCall(request).execute()) {
                 String responseBody = response.body() != null ? response.body().string() : "";
-                handleError(response.code(), responseBody);
+
+                if (!response.isSuccessful()) {
+                    if (shouldRetry(response.code())) {
+                        Long retryAfterMs = parseRetryAfter(response.header("Retry-After"));
+                        long delay = calculateDelay(attempt, retryAfterMs);
+
+                        // Store the error in case this is the last attempt
+                        lastError = createExceptionFromResponse(response.code(), responseBody);
+
+                        // If we have more attempts, wait and retry
+                        if (attempt < maxAttempts - 1) {
+                            Thread.sleep(delay);
+                            continue;
+                        }
+                    }
+                    handleError(response.code(), responseBody);
+                }
+
+                if (responseType == Void.class || responseBody.isEmpty()) {
+                    return null;
+                }
+
+                return objectMapper.readValue(responseBody, responseType);
+            } catch (IOException e) {
+                throw new RenderbaseException("Request failed", e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RenderbaseException("Request interrupted during retry", e);
             }
+        }
+
+        // If we've exhausted all retries, throw the last error
+        if (lastError != null) {
+            throw lastError;
+        }
+
+        throw new RenderbaseException("Request failed after retries", null, 0);
+    }
+
+    private <T> T executeWithRetry(Request request, TypeReference<T> typeReference) throws RenderbaseException {
+        int maxAttempts = config.isRetryEnabled() ? config.getMaxRetries() : 1;
+        RenderbaseException lastError = null;
+
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            try (Response response = client.newCall(request).execute()) {
+                String responseBody = response.body() != null ? response.body().string() : "";
+
+                if (!response.isSuccessful()) {
+                    if (shouldRetry(response.code())) {
+                        Long retryAfterMs = parseRetryAfter(response.header("Retry-After"));
+                        long delay = calculateDelay(attempt, retryAfterMs);
+
+                        // Store the error in case this is the last attempt
+                        lastError = createExceptionFromResponse(response.code(), responseBody);
+
+                        // If we have more attempts, wait and retry
+                        if (attempt < maxAttempts - 1) {
+                            Thread.sleep(delay);
+                            continue;
+                        }
+                    }
+                    handleError(response.code(), responseBody);
+                }
+
+                if (responseBody.isEmpty()) {
+                    return null;
+                }
+
+                return objectMapper.readValue(responseBody, typeReference);
+            } catch (IOException e) {
+                throw new RenderbaseException("Request failed", e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RenderbaseException("Request interrupted during retry", e);
+            }
+        }
+
+        // If we've exhausted all retries, throw the last error
+        if (lastError != null) {
+            throw lastError;
+        }
+
+        throw new RenderbaseException("Request failed after retries", null, 0);
+    }
+
+    private void executeVoidWithRetry(Request request) throws RenderbaseException {
+        int maxAttempts = config.isRetryEnabled() ? config.getMaxRetries() : 1;
+        RenderbaseException lastError = null;
+
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    String responseBody = response.body() != null ? response.body().string() : "";
+
+                    if (shouldRetry(response.code())) {
+                        Long retryAfterMs = parseRetryAfter(response.header("Retry-After"));
+                        long delay = calculateDelay(attempt, retryAfterMs);
+
+                        // Store the error in case this is the last attempt
+                        lastError = createExceptionFromResponse(response.code(), responseBody);
+
+                        // If we have more attempts, wait and retry
+                        if (attempt < maxAttempts - 1) {
+                            Thread.sleep(delay);
+                            continue;
+                        }
+                    }
+                    handleError(response.code(), responseBody);
+                }
+                return;
+            } catch (IOException e) {
+                throw new RenderbaseException("Request failed", e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RenderbaseException("Request interrupted during retry", e);
+            }
+        }
+
+        // If we've exhausted all retries, throw the last error
+        if (lastError != null) {
+            throw lastError;
+        }
+
+        throw new RenderbaseException("Request failed after retries", null, 0);
+    }
+
+    private RenderbaseException createExceptionFromResponse(int statusCode, String responseBody) {
+        try {
+            ApiError error = objectMapper.readValue(responseBody, ApiError.class);
+            return new RenderbaseException(error.getMessage(), error.getCode(), statusCode);
         } catch (IOException e) {
-            throw new RenderbaseException("Request failed", e);
+            return new RenderbaseException("HTTP " + statusCode + ": " + responseBody, null, statusCode);
         }
     }
 
