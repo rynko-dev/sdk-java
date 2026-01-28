@@ -1,13 +1,13 @@
-package com.renderbase.resources;
+package dev.rynko.resources;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.renderbase.exceptions.RenderbaseException;
-import com.renderbase.models.GenerateRequest;
-import com.renderbase.models.GenerateResult;
-import com.renderbase.models.ListResponse;
-import com.renderbase.models.PaginationMeta;
-import com.renderbase.utils.HttpClient;
+import dev.rynko.exceptions.RynkoException;
+import dev.rynko.models.GenerateRequest;
+import dev.rynko.models.GenerateResult;
+import dev.rynko.models.ListResponse;
+import dev.rynko.models.PaginationMeta;
+import dev.rynko.utils.HttpClient;
 
 import java.util.HashMap;
 import java.util.List;
@@ -55,9 +55,9 @@ public class DocumentsResource {
      *
      * @param request The generation request containing template ID, format, variables, and optional workspaceId
      * @return The generation result with download URL
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public GenerateResult generate(GenerateRequest request) throws RenderbaseException {
+    public GenerateResult generate(GenerateRequest request) throws RynkoException {
         return httpClient.post("/documents/generate", request, GenerateResult.class);
     }
 
@@ -66,9 +66,9 @@ public class DocumentsResource {
      *
      * @param jobId The job ID
      * @return The generation result
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public GenerateResult get(String jobId) throws RenderbaseException {
+    public GenerateResult get(String jobId) throws RynkoException {
         return httpClient.get("/documents/jobs/" + jobId, GenerateResult.class);
     }
 
@@ -76,9 +76,9 @@ public class DocumentsResource {
      * Lists document generation jobs.
      *
      * @return Paginated list of generation results
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<GenerateResult> list() throws RenderbaseException {
+    public ListResponse<GenerateResult> list() throws RynkoException {
         return list(null, null, null, null, null);
     }
 
@@ -88,9 +88,9 @@ public class DocumentsResource {
      * @param page  Page number (1-based)
      * @param limit Number of items per page
      * @return Paginated list of generation results
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<GenerateResult> list(Integer page, Integer limit) throws RenderbaseException {
+    public ListResponse<GenerateResult> list(Integer page, Integer limit) throws RynkoException {
         return list(page, limit, null, null, null);
     }
 
@@ -102,9 +102,9 @@ public class DocumentsResource {
      * @param templateId  Filter by template ID
      * @param workspaceId Filter by workspace ID
      * @return Paginated list of generation results
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<GenerateResult> list(Integer page, Integer limit, String templateId, String workspaceId) throws RenderbaseException {
+    public ListResponse<GenerateResult> list(Integer page, Integer limit, String templateId, String workspaceId) throws RynkoException {
         return list(page, limit, templateId, workspaceId, null);
     }
 
@@ -117,9 +117,9 @@ public class DocumentsResource {
      * @param workspaceId Filter by workspace ID
      * @param status      Filter by status (queued, processing, completed, failed)
      * @return Paginated list of generation results
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<GenerateResult> list(Integer page, Integer limit, String templateId, String workspaceId, String status) throws RenderbaseException {
+    public ListResponse<GenerateResult> list(Integer page, Integer limit, String templateId, String workspaceId, String status) throws RynkoException {
         int effectiveLimit = limit != null ? limit : 20;
         int effectivePage = page != null ? page : 1;
         int offset = (effectivePage - 1) * effectiveLimit;
@@ -174,9 +174,9 @@ public class DocumentsResource {
      * Deletes a generated document.
      *
      * @param jobId The job ID of the document to delete
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public void delete(String jobId) throws RenderbaseException {
+    public void delete(String jobId) throws RynkoException {
         httpClient.delete("/documents/jobs/" + jobId);
     }
 
@@ -188,10 +188,10 @@ public class DocumentsResource {
      *
      * @param jobId The job ID to wait for
      * @return The completed generation result with download URL
-     * @throws RenderbaseException if the request fails or the job fails
+     * @throws RynkoException if the request fails or the job fails
      * @throws RuntimeException if the timeout is exceeded
      */
-    public GenerateResult waitForCompletion(String jobId) throws RenderbaseException {
+    public GenerateResult waitForCompletion(String jobId) throws RynkoException {
         return waitForCompletion(jobId, 1000, 30000);
     }
 
@@ -202,10 +202,10 @@ public class DocumentsResource {
      * @param pollIntervalMs Time between polls in milliseconds (default: 1000)
      * @param timeoutMs Maximum wait time in milliseconds (default: 30000)
      * @return The completed generation result with download URL
-     * @throws RenderbaseException if the request fails or the job fails
+     * @throws RynkoException if the request fails or the job fails
      * @throws RuntimeException if the timeout is exceeded
      */
-    public GenerateResult waitForCompletion(String jobId, long pollIntervalMs, long timeoutMs) throws RenderbaseException {
+    public GenerateResult waitForCompletion(String jobId, long pollIntervalMs, long timeoutMs) throws RynkoException {
         long startTime = System.currentTimeMillis();
 
         while (true) {
@@ -233,9 +233,9 @@ public class DocumentsResource {
      *
      * @param downloadUrl The download URL from the generation result
      * @return The document bytes
-     * @throws RenderbaseException if the download fails
+     * @throws RynkoException if the download fails
      */
-    public byte[] download(String downloadUrl) throws RenderbaseException {
+    public byte[] download(String downloadUrl) throws RynkoException {
         try {
             java.net.URL url = new java.net.URL(downloadUrl);
             java.io.InputStream inputStream = url.openStream();
@@ -250,7 +250,7 @@ public class DocumentsResource {
             inputStream.close();
             return outputStream.toByteArray();
         } catch (java.io.IOException e) {
-            throw new RenderbaseException("Failed to download document", e);
+            throw new RynkoException("Failed to download document", e);
         }
     }
 }

@@ -1,11 +1,11 @@
-package com.renderbase.resources;
+package dev.rynko.resources;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.renderbase.exceptions.RenderbaseException;
-import com.renderbase.models.ListResponse;
-import com.renderbase.models.PaginationMeta;
-import com.renderbase.models.Template;
-import com.renderbase.utils.HttpClient;
+import dev.rynko.exceptions.RynkoException;
+import dev.rynko.models.ListResponse;
+import dev.rynko.models.PaginationMeta;
+import dev.rynko.models.Template;
+import dev.rynko.utils.HttpClient;
 
 import java.util.HashMap;
 import java.util.List;
@@ -47,9 +47,9 @@ public class TemplatesResource {
      * Lists all templates.
      *
      * @return Paginated list of templates
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<Template> list() throws RenderbaseException {
+    public ListResponse<Template> list() throws RynkoException {
         return list(null, null, null);
     }
 
@@ -59,9 +59,9 @@ public class TemplatesResource {
      * @param page  Page number (1-based)
      * @param limit Number of items per page
      * @return Paginated list of templates
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<Template> list(Integer page, Integer limit) throws RenderbaseException {
+    public ListResponse<Template> list(Integer page, Integer limit) throws RynkoException {
         return list(page, limit, null);
     }
 
@@ -72,9 +72,9 @@ public class TemplatesResource {
      * @param limit  Number of items per page
      * @param search Search by template name
      * @return Paginated list of templates
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<Template> list(Integer page, Integer limit, String search) throws RenderbaseException {
+    public ListResponse<Template> list(Integer page, Integer limit, String search) throws RynkoException {
         Map<String, String> params = new HashMap<>();
         if (page != null) {
             params.put("page", page.toString());
@@ -95,9 +95,9 @@ public class TemplatesResource {
      * Lists PDF templates (client-side filter by outputFormats).
      *
      * @return Paginated list of PDF templates
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<Template> listPdf() throws RenderbaseException {
+    public ListResponse<Template> listPdf() throws RynkoException {
         return listPdf(null, null);
     }
 
@@ -107,9 +107,9 @@ public class TemplatesResource {
      * @param page  Page number (1-based)
      * @param limit Number of items per page
      * @return Paginated list of PDF templates
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<Template> listPdf(Integer page, Integer limit) throws RenderbaseException {
+    public ListResponse<Template> listPdf(Integer page, Integer limit) throws RynkoException {
         ListResponse<Template> result = list(page, limit);
         if (result.getData() != null) {
             List<Template> filtered = result.getData().stream()
@@ -124,9 +124,9 @@ public class TemplatesResource {
      * Lists Excel templates (client-side filter by outputFormats).
      *
      * @return Paginated list of Excel templates
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<Template> listExcel() throws RenderbaseException {
+    public ListResponse<Template> listExcel() throws RynkoException {
         return listExcel(null, null);
     }
 
@@ -136,9 +136,9 @@ public class TemplatesResource {
      * @param page  Page number (1-based)
      * @param limit Number of items per page
      * @return Paginated list of Excel templates
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<Template> listExcel(Integer page, Integer limit) throws RenderbaseException {
+    public ListResponse<Template> listExcel(Integer page, Integer limit) throws RynkoException {
         ListResponse<Template> result = list(page, limit);
         if (result.getData() != null) {
             List<Template> filtered = result.getData().stream()
@@ -155,9 +155,9 @@ public class TemplatesResource {
      *
      * @param templateId The template ID (UUID, shortId, or slug)
      * @return The template
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public Template get(String templateId) throws RenderbaseException {
+    public Template get(String templateId) throws RynkoException {
         // Templates use non-versioned API: /api/templates/{id}
         String url = httpClient.getBaseUrlWithoutVersion() + "/api/templates/" + templateId;
         return httpClient.getAbsolute(url, Template.class);
@@ -168,9 +168,9 @@ public class TemplatesResource {
      *
      * @param shortId The template short ID (e.g., "tmpl_abc123")
      * @return The template
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public Template getByShortId(String shortId) throws RenderbaseException {
+    public Template getByShortId(String shortId) throws RynkoException {
         return get(shortId);
     }
 
@@ -179,9 +179,9 @@ public class TemplatesResource {
      *
      * @param slug The template slug (e.g., "invoice-template")
      * @return The template
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public Template getBySlug(String slug) throws RenderbaseException {
+    public Template getBySlug(String slug) throws RynkoException {
         return get(slug);
     }
 }

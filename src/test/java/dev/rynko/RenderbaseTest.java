@@ -1,6 +1,6 @@
-package com.renderbase;
+package dev.rynko;
 
-import com.renderbase.models.GenerateRequest;
+import dev.rynko.models.GenerateRequest;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -9,13 +9,13 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for Renderbase client.
+ * Unit tests for Rynko client.
  */
-public class RenderbaseTest {
+public class RynkoTest {
 
     @Test
     void testClientCreation() {
-        Renderbase client = new Renderbase("test-api-key");
+        Rynko client = new Rynko("test-api-key");
         assertNotNull(client);
         assertNotNull(client.documents());
         assertNotNull(client.templates());
@@ -24,27 +24,27 @@ public class RenderbaseTest {
 
     @Test
     void testClientCreationWithConfig() {
-        RenderbaseConfig config = RenderbaseConfig.builder()
+        RynkoConfig config = RynkoConfig.builder()
                 .apiKey("test-api-key")
                 .baseUrl("https://custom.api.com/v1")
                 .timeoutMs(60000)
                 .build();
 
-        Renderbase client = new Renderbase(config);
+        Rynko client = new Rynko(config);
         assertNotNull(client);
     }
 
     @Test
     void testClientCreationWithoutApiKey() {
         assertThrows(IllegalArgumentException.class, () -> {
-            new Renderbase((String) null);
+            new Rynko((String) null);
         });
     }
 
     @Test
     void testClientCreationWithEmptyApiKey() {
         assertThrows(IllegalArgumentException.class, () -> {
-            new Renderbase("");
+            new Rynko("");
         });
     }
 
@@ -110,18 +110,18 @@ public class RenderbaseTest {
 
     @Test
     void testConfigBuilderDefaults() {
-        RenderbaseConfig config = RenderbaseConfig.builder()
+        RynkoConfig config = RynkoConfig.builder()
                 .apiKey("test-key")
                 .build();
 
         assertEquals("test-key", config.getApiKey());
-        assertEquals("https://api.renderbase.dev/api/v1", config.getBaseUrl());
+        assertEquals("https://api.rynko.dev/api/v1", config.getBaseUrl());
         assertEquals(30000, config.getTimeoutMs());
     }
 
     @Test
     void testConfigBuilderCustomValues() {
-        RenderbaseConfig config = RenderbaseConfig.builder()
+        RynkoConfig config = RynkoConfig.builder()
                 .apiKey("test-key")
                 .baseUrl("https://custom.com/v2")
                 .timeoutMs(60000)

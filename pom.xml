@@ -4,14 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.renderbase</groupId>
+    <groupId>dev.rynko</groupId>
     <artifactId>sdk</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>Renderbase Java SDK</name>
-    <description>Official Java SDK for Renderbase - Generate PDFs and Excel files from templates</description>
-    <url>https://github.com/renderbase/sdk-java</url>
+    <name>Rynko Java SDK</name>
+    <description>Official Java SDK for Rynko - Generate PDFs and Excel files from templates</description>
+    <url>https://github.com/rynko/sdk-java</url>
 
     <licenses>
         <license>
@@ -22,17 +22,17 @@
 
     <developers>
         <developer>
-            <name>Renderbase</name>
-            <email>support@renderbase.dev</email>
-            <organization>Renderbase</organization>
-            <organizationUrl>https://renderbase.dev</organizationUrl>
+            <name>Rynko</name>
+            <email>support@rynko.dev</email>
+            <organization>Rynko</organization>
+            <organizationUrl>https://rynko.dev</organizationUrl>
         </developer>
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/renderbase/sdk-java.git</connection>
-        <developerConnection>scm:git:ssh://github.com:renderbase/sdk-java.git</developerConnection>
-        <url>https://github.com/renderbase/sdk-java/tree/main</url>
+        <connection>scm:git:git://github.com/rynko/sdk-java.git</connection>
+        <developerConnection>scm:git:ssh://github.com:rynko/sdk-java.git</developerConnection>
+        <url>https://github.com/rynko/sdk-java/tree/main</url>
     </scm>
 
     <properties>

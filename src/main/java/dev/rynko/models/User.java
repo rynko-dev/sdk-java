@@ -1,4 +1,4 @@
-package com.renderbase.models;
+package dev.rynko.models;
 
 /**
  * Represents the authenticated user.

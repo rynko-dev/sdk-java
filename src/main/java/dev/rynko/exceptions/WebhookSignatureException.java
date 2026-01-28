@@ -1,4 +1,4 @@
-package com.renderbase.exceptions;
+package dev.rynko.exceptions;
 
 /**
  * Exception thrown when webhook signature verification fails.

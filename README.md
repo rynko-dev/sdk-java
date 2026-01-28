@@ -1,8 +1,8 @@
-# Renderbase Java SDK
+# Rynko Java SDK
 
-Official Java SDK for [Renderbase](https://renderbase.dev) - the document generation platform with unified template design for PDF and Excel documents.
+Official Java SDK for [Rynko](https://rynko.dev) - the document generation platform with unified template design for PDF and Excel documents.
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.renderbase/sdk.svg)](https://search.maven.org/artifact/com.renderbase/sdk)
+[![Maven Central](https://img.shields.io/maven-central/v/com.rynko/sdk.svg)](https://search.maven.org/artifact/com.rynko/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Table of Contents
@@ -47,7 +47,7 @@ Add to your `pom.xml`:
 
 ```xml
 <dependency>
-    <groupId>com.renderbase</groupId>
+    <groupId>com.rynko</groupId>
     <artifactId>sdk</artifactId>
     <version>1.0.0</version>
 </dependency>
@@ -58,26 +58,26 @@ Add to your `pom.xml`:
 Add to your `build.gradle`:
 
 ```groovy
-implementation 'com.renderbase:sdk:1.0.0'
+implementation 'com.rynko:sdk:1.0.0'
 ```
 
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("com.renderbase:sdk:1.0.0")
+implementation("com.rynko:sdk:1.0.0")
 ```
 
 ## Quick Start
 
 ```java
-import com.renderbase.Renderbase;
-import com.renderbase.models.GenerateRequest;
-import com.renderbase.models.GenerateResult;
+import com.rynko.Rynko;
+import com.rynko.models.GenerateRequest;
+import com.rynko.models.GenerateResult;
 
 public class Example {
     public static void main(String[] args) {
         // Initialize the client
-        Renderbase client = new Renderbase(System.getenv("RENDERBASE_API_KEY"));
+        Rynko client = new Rynko(System.getenv("RYNKO_API_KEY"));
 
         // Queue document generation (async operation)
         GenerateResult job = client.documents().generate(
@@ -121,7 +121,7 @@ public class Example {
 
 ### Get an API Key
 
-1. Log in to your [Renderbase Dashboard](https://app.renderbase.dev)
+1. Log in to your [Rynko Dashboard](https://app.rynko.dev)
 2. Navigate to **Settings** → **API Keys**
 3. Click **Create API Key**
 4. Copy the key and store it securely (it won't be shown again)
@@ -129,11 +129,11 @@ public class Example {
 ### Initialize the Client
 
 ```java
-import com.renderbase.Renderbase;
-import com.renderbase.models.User;
+import com.rynko.Rynko;
+import com.rynko.models.User;
 
 // Using environment variable (recommended)
-Renderbase client = new Renderbase(System.getenv("RENDERBASE_API_KEY"));
+Rynko client = new Rynko(System.getenv("RYNKO_API_KEY"));
 
 // Verify authentication
 User user = client.me();
@@ -151,13 +151,13 @@ System.out.println("API Key valid: " + isValid);
 
 ## Document Generation
 
-Document generation in Renderbase is **asynchronous**. When you call `generate()`, the job is queued for processing and you receive a job ID immediately. Use `waitForCompletion()` to poll until the document is ready.
+Document generation in Rynko is **asynchronous**. When you call `generate()`, the job is queued for processing and you receive a job ID immediately. Use `waitForCompletion()` to poll until the document is ready.
 
 ### Generate PDF
 
 ```java
-import com.renderbase.models.GenerateRequest;
-import com.renderbase.models.GenerateResult;
+import com.rynko.models.GenerateRequest;
+import com.rynko.models.GenerateResult;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -294,7 +294,7 @@ try (FileOutputStream fos = new FileOutputStream("document.pdf")) {
 ### Get Job Status
 
 ```java
-import com.renderbase.models.GenerateResult;
+import com.rynko.models.GenerateResult;
 
 GenerateResult job = client.documents().get("job_abc123");
 
@@ -320,8 +320,8 @@ if (job.isFailed()) {
 ### List Jobs
 
 ```java
-import com.renderbase.models.ListResponse;
-import com.renderbase.models.GenerateResult;
+import com.rynko.models.ListResponse;
+import com.rynko.models.GenerateResult;
 
 // List recent jobs with pagination
 ListResponse<GenerateResult> result = client.documents().list(1, 20);
@@ -363,8 +363,8 @@ ListResponse<GenerateResult> filteredJobs = client.documents().list(
 ### List Templates
 
 ```java
-import com.renderbase.models.ListResponse;
-import com.renderbase.models.Template;
+import com.rynko.models.ListResponse;
+import com.rynko.models.Template;
 
 // List all templates
 ListResponse<Template> result = client.templates().list();
@@ -390,8 +390,8 @@ ListResponse<Template> excelOnly = client.templates().listExcel();
 ### Get Template Details
 
 ```java
-import com.renderbase.models.Template;
-import com.renderbase.models.TemplateVariable;
+import com.rynko.models.Template;
+import com.rynko.models.TemplateVariable;
 
 // Get template by ID (supports UUID, shortId, or slug)
 Template template = client.templates().get("tmpl_invoice");
@@ -417,13 +417,13 @@ if (template.getVariables() != null) {
 
 ## Webhooks
 
-Webhook subscriptions are managed through the [Renderbase Dashboard](https://app.renderbase.dev). The SDK provides read-only access to view webhooks and utilities for signature verification.
+Webhook subscriptions are managed through the [Rynko Dashboard](https://app.rynko.dev). The SDK provides read-only access to view webhooks and utilities for signature verification.
 
 ### List Webhooks
 
 ```java
-import com.renderbase.models.ListResponse;
-import com.renderbase.resources.WebhooksResource.WebhookSubscription;
+import com.rynko.models.ListResponse;
+import com.rynko.resources.WebhooksResource.WebhookSubscription;
 
 ListResponse<WebhookSubscription> result = client.webhooks().list();
 
@@ -448,11 +448,11 @@ System.out.println("Description: " + webhook.getDescription());
 
 ### Verify Webhook Signatures
 
-When receiving webhooks, always verify the signature to ensure the request came from Renderbase:
+When receiving webhooks, always verify the signature to ensure the request came from Rynko:
 
 ```java
-import com.renderbase.resources.WebhooksResource.WebhookEvent;
-import com.renderbase.exceptions.WebhookSignatureException;
+import com.rynko.resources.WebhooksResource.WebhookEvent;
+import com.rynko.exceptions.WebhookSignatureException;
 
 // In your webhook endpoint handler (e.g., Spring Controller, Servlet)
 public void handleWebhook(HttpServletRequest request, HttpServletResponse response)
@@ -460,8 +460,8 @@ public void handleWebhook(HttpServletRequest request, HttpServletResponse respon
 
     // Read the raw request body
     String payload = request.getReader().lines().collect(Collectors.joining());
-    String signature = request.getHeader("X-Renderbase-Signature");
-    String timestamp = request.getHeader("X-Renderbase-Timestamp");
+    String signature = request.getHeader("X-Rynko-Signature");
+    String timestamp = request.getHeader("X-Rynko-Timestamp");
     String webhookSecret = System.getenv("WEBHOOK_SECRET");
 
     try {
@@ -537,31 +537,31 @@ private void handleDocumentDownloaded(WebhookEvent event) {
 ```java
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
-import com.renderbase.Renderbase;
-import com.renderbase.resources.WebhooksResource.WebhookEvent;
-import com.renderbase.exceptions.WebhookSignatureException;
+import com.rynko.Rynko;
+import com.rynko.resources.WebhooksResource.WebhookEvent;
+import com.rynko.exceptions.WebhookSignatureException;
 
 @RestController
 @RequestMapping("/webhooks")
 public class WebhookController {
 
-    private final Renderbase renderbase;
+    private final Rynko rynko;
     private final String webhookSecret;
 
-    public WebhookController(Renderbase renderbase,
-                            @Value("${renderbase.webhook-secret}") String webhookSecret) {
-        this.renderbase = renderbase;
+    public WebhookController(Rynko rynko,
+                            @Value("${rynko.webhook-secret}") String webhookSecret) {
+        this.rynko = rynko;
         this.webhookSecret = webhookSecret;
     }
 
-    @PostMapping("/renderbase")
+    @PostMapping("/rynko")
     public ResponseEntity<String> handleWebhook(
             @RequestBody String payload,
-            @RequestHeader("X-Renderbase-Signature") String signature,
-            @RequestHeader("X-Renderbase-Timestamp") String timestamp) {
+            @RequestHeader("X-Rynko-Signature") String signature,
+            @RequestHeader("X-Rynko-Timestamp") String timestamp) {
 
         try {
-            WebhookEvent event = renderbase.webhooks().constructEvent(
+            WebhookEvent event = rynko.webhooks().constructEvent(
                 payload, signature, timestamp, webhookSecret
             );
 
@@ -595,14 +595,14 @@ public class WebhookController {
 
 #### Webhook Headers
 
-Renderbase sends these headers with each webhook request:
+Rynko sends these headers with each webhook request:
 
 | Header | Description |
 |--------|-------------|
-| `X-Renderbase-Signature` | HMAC-SHA256 signature (format: `v1=<hex>`) |
-| `X-Renderbase-Timestamp` | Unix timestamp when the webhook was sent |
-| `X-Renderbase-Event-Id` | Unique event identifier |
-| `X-Renderbase-Event-Type` | Event type (e.g., `document.generated`) |
+| `X-Rynko-Signature` | HMAC-SHA256 signature (format: `v1=<hex>`) |
+| `X-Rynko-Timestamp` | Unix timestamp when the webhook was sent |
+| `X-Rynko-Event-Id` | Unique event identifier |
+| `X-Rynko-Event-Type` | Event type (e.g., `document.generated`) |
 
 #### Manual Signature Verification
 
@@ -627,37 +627,37 @@ WebhookEvent event = client.webhooks().constructEvent(payload);
 
 ```java
 // Simple initialization with API key
-Renderbase client = new Renderbase(System.getenv("RENDERBASE_API_KEY"));
+Rynko client = new Rynko(System.getenv("RYNKO_API_KEY"));
 
 // With custom base URL
-Renderbase client = new Renderbase(
-    System.getenv("RENDERBASE_API_KEY"),
-    "https://api.renderbase.dev/api"
+Rynko client = new Rynko(
+    System.getenv("RYNKO_API_KEY"),
+    "https://api.rynko.dev/api"
 );
 ```
 
 ### Advanced Configuration
 
 ```java
-import com.renderbase.RenderbaseConfig;
+import com.rynko.RynkoConfig;
 
-RenderbaseConfig config = RenderbaseConfig.builder()
-    .apiKey(System.getenv("RENDERBASE_API_KEY"))
-    .baseUrl("https://api.renderbase.dev/api")
+RynkoConfig config = RynkoConfig.builder()
+    .apiKey(System.getenv("RYNKO_API_KEY"))
+    .baseUrl("https://api.rynko.dev/api")
     .timeoutMs(60000)  // 60 seconds
     .build();
 
-Renderbase client = new Renderbase(config);
+Rynko client = new Rynko(config);
 ```
 
 ## Error Handling
 
 ```java
-import com.renderbase.exceptions.RenderbaseException;
+import com.rynko.exceptions.RynkoException;
 
 try {
     GenerateResult result = client.documents().generate(request);
-} catch (RenderbaseException e) {
+} catch (RynkoException e) {
     System.err.println("Error: " + e.getMessage());
     System.err.println("Error Code: " + e.getCode());
     System.err.println("Status Code: " + e.getStatusCode());
@@ -700,26 +700,26 @@ try {
 
 ## Thread Safety
 
-The `Renderbase` client is **thread-safe** and can be shared across multiple threads. We recommend creating a single instance and reusing it throughout your application.
+The `Rynko` client is **thread-safe** and can be shared across multiple threads. We recommend creating a single instance and reusing it throughout your application.
 
 ```java
 // Application-wide singleton pattern
-public class RenderbaseClient {
-    private static final Renderbase INSTANCE;
+public class RynkoClient {
+    private static final Rynko INSTANCE;
 
     static {
-        INSTANCE = new Renderbase(System.getenv("RENDERBASE_API_KEY"));
+        INSTANCE = new Rynko(System.getenv("RYNKO_API_KEY"));
     }
 
-    public static Renderbase getInstance() {
+    public static Rynko getInstance() {
         return INSTANCE;
     }
 
-    private RenderbaseClient() {} // Prevent instantiation
+    private RynkoClient() {} // Prevent instantiation
 }
 
 // Usage from any thread
-GenerateResult job = RenderbaseClient.getInstance().documents().generate(request);
+GenerateResult job = RynkoClient.getInstance().documents().generate(request);
 ```
 
 ## Spring Boot Integration
@@ -730,29 +730,29 @@ GenerateResult job = RenderbaseClient.getInstance().documents().generate(request
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
-import com.renderbase.Renderbase;
-import com.renderbase.RenderbaseConfig;
+import com.rynko.Rynko;
+import com.rynko.RynkoConfig;
 
 @Configuration
-public class RenderbaseConfiguration {
+public class RynkoConfiguration {
 
-    @Value("${renderbase.api-key}")
+    @Value("${rynko.api-key}")
     private String apiKey;
 
-    @Value("${renderbase.base-url:https://api.renderbase.dev/api}")
+    @Value("${rynko.base-url:https://api.rynko.dev/api}")
     private String baseUrl;
 
-    @Value("${renderbase.timeout-ms:30000}")
+    @Value("${rynko.timeout-ms:30000}")
     private int timeoutMs;
 
     @Bean
-    public Renderbase renderbase() {
-        RenderbaseConfig config = RenderbaseConfig.builder()
+    public Rynko rynko() {
+        RynkoConfig config = RynkoConfig.builder()
             .apiKey(apiKey)
             .baseUrl(baseUrl)
             .timeoutMs(timeoutMs)
             .build();
-        return new Renderbase(config);
+        return new Rynko(config);
     }
 }
 ```
@@ -761,32 +761,32 @@ public class RenderbaseConfiguration {
 
 ```properties
 # application.properties
-renderbase.api-key=${RENDERBASE_API_KEY}
-renderbase.base-url=https://api.renderbase.dev/api
-renderbase.timeout-ms=30000
-renderbase.webhook-secret=${WEBHOOK_SECRET}
+rynko.api-key=${RYNKO_API_KEY}
+rynko.base-url=https://api.rynko.dev/api
+rynko.timeout-ms=30000
+rynko.webhook-secret=${WEBHOOK_SECRET}
 ```
 
 ### Service Example
 
 ```java
 import org.springframework.stereotype.Service;
-import com.renderbase.Renderbase;
-import com.renderbase.models.GenerateRequest;
-import com.renderbase.models.GenerateResult;
+import com.rynko.Rynko;
+import com.rynko.models.GenerateRequest;
+import com.rynko.models.GenerateResult;
 
 @Service
 public class DocumentService {
 
-    private final Renderbase renderbase;
+    private final Rynko rynko;
 
-    public DocumentService(Renderbase renderbase) {
-        this.renderbase = renderbase;
+    public DocumentService(Rynko rynko) {
+        this.rynko = rynko;
     }
 
     public String generateInvoice(Invoice invoice) {
         // Queue document generation
-        GenerateResult job = renderbase.documents().generate(
+        GenerateResult job = rynko.documents().generate(
             GenerateRequest.builder()
                 .templateId("tmpl_invoice")
                 .format("pdf")
@@ -801,7 +801,7 @@ public class DocumentService {
         );
 
         // Wait for completion
-        GenerateResult completed = renderbase.documents().waitForCompletion(job.getJobId());
+        GenerateResult completed = rynko.documents().waitForCompletion(job.getJobId());
 
         if (completed.isFailed()) {
             throw new RuntimeException("Document generation failed: " + completed.getErrorMessage());
@@ -811,7 +811,7 @@ public class DocumentService {
     }
 
     public byte[] downloadDocument(String downloadUrl) {
-        return renderbase.documents().download(downloadUrl);
+        return rynko.documents().download(downloadUrl);
     }
 }
 ```
@@ -846,7 +846,7 @@ public class InvoiceController {
 
 ## API Reference
 
-### Renderbase
+### Rynko
 
 | Method | Returns | Description |
 |--------|---------|-------------|
@@ -901,7 +901,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- **Documentation**: https://docs.renderbase.dev/sdk/java
-- **API Reference**: https://docs.renderbase.dev/api
-- **GitHub Issues**: https://github.com/renderbase/sdk-java/issues
-- **Email**: support@renderbase.dev
+- **Documentation**: https://docs.rynko.dev/sdk/java
+- **API Reference**: https://docs.rynko.dev/api
+- **GitHub Issues**: https://github.com/rynko/sdk-java/issues
+- **Email**: support@rynko.dev

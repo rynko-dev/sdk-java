@@ -1,4 +1,4 @@
-package com.renderbase.models;
+package dev.rynko.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

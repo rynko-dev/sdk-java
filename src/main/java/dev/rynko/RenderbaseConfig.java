@@ -1,4 +1,4 @@
-package com.renderbase;
+package dev.rynko;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -6,11 +6,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Configuration for the Renderbase client.
+ * Configuration for the Rynko client.
  */
-public class RenderbaseConfig {
+public class RynkoConfig {
 
-    private static final String DEFAULT_BASE_URL = "https://api.renderbase.dev/api/v1";
+    private static final String DEFAULT_BASE_URL = "https://api.rynko.dev/api/v1";
     private static final int DEFAULT_TIMEOUT_MS = 30000;
     private static final int DEFAULT_MAX_RETRIES = 5;
     private static final int DEFAULT_INITIAL_DELAY_MS = 1000;
@@ -32,25 +32,25 @@ public class RenderbaseConfig {
     /**
      * Creates a configuration with the specified API key.
      *
-     * @param apiKey Your Renderbase API key
+     * @param apiKey Your Rynko API key
      */
-    public RenderbaseConfig(String apiKey) {
+    public RynkoConfig(String apiKey) {
         this(apiKey, DEFAULT_BASE_URL);
     }
 
     /**
      * Creates a configuration with the specified API key and base URL.
      *
-     * @param apiKey  Your Renderbase API key
+     * @param apiKey  Your Rynko API key
      * @param baseUrl Custom API base URL
      */
-    public RenderbaseConfig(String apiKey, String baseUrl) {
+    public RynkoConfig(String apiKey, String baseUrl) {
         this(apiKey, baseUrl, DEFAULT_TIMEOUT_MS, DEFAULT_MAX_RETRIES,
              DEFAULT_INITIAL_DELAY_MS, DEFAULT_MAX_DELAY_MS, DEFAULT_MAX_JITTER_MS,
              DEFAULT_RETRYABLE_STATUSES, true);
     }
 
-    private RenderbaseConfig(String apiKey, String baseUrl, int timeoutMs, int maxRetries,
+    private RynkoConfig(String apiKey, String baseUrl, int timeoutMs, int maxRetries,
                              int initialDelayMs, int maxDelayMs, int maxJitterMs,
                              Set<Integer> retryableStatuses, boolean retryEnabled) {
         this.apiKey = apiKey;
@@ -110,7 +110,7 @@ public class RenderbaseConfig {
     }
 
     /**
-     * Builder for RenderbaseConfig.
+     * Builder for RynkoConfig.
      */
     public static class Builder {
         private String apiKey;
@@ -186,8 +186,8 @@ public class RenderbaseConfig {
             return this;
         }
 
-        public RenderbaseConfig build() {
-            return new RenderbaseConfig(apiKey, baseUrl, timeoutMs, maxRetries,
+        public RynkoConfig build() {
+            return new RynkoConfig(apiKey, baseUrl, timeoutMs, maxRetries,
                                        initialDelayMs, maxDelayMs, maxJitterMs,
                                        retryableStatuses, retryEnabled);
         }

@@ -1,13 +1,13 @@
-package com.renderbase.utils;
+package dev.rynko.utils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.renderbase.RenderbaseConfig;
-import com.renderbase.exceptions.RenderbaseException;
-import com.renderbase.models.ApiError;
+import dev.rynko.RynkoConfig;
+import dev.rynko.exceptions.RynkoException;
+import dev.rynko.models.ApiError;
 import okhttp3.*;
 
 import java.io.IOException;
@@ -16,22 +16,22 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /**
- * HTTP client for making requests to the Renderbase API with automatic retry
+ * HTTP client for making requests to the Rynko API with automatic retry
  * and exponential backoff.
  */
 public class HttpClient {
 
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
-    private static final String USER_AGENT = "renderbase-java/1.0.0";
+    private static final String USER_AGENT = "rynko-java/1.0.0";
 
     private final OkHttpClient client;
     private final ObjectMapper objectMapper;
     private final String baseUrl;
     private final String apiKey;
-    private final RenderbaseConfig config;
+    private final RynkoConfig config;
     private final Random random;
 
-    public HttpClient(RenderbaseConfig config) {
+    public HttpClient(RynkoConfig config) {
         this.baseUrl = config.getBaseUrl();
         this.apiKey = config.getApiKey();
         this.config = config;
@@ -100,14 +100,14 @@ public class HttpClient {
     /**
      * Makes a GET request.
      */
-    public <T> T get(String path, Class<T> responseType) throws RenderbaseException {
+    public <T> T get(String path, Class<T> responseType) throws RynkoException {
         return get(path, null, responseType);
     }
 
     /**
      * Makes a GET request with query parameters.
      */
-    public <T> T get(String path, Map<String, String> queryParams, Class<T> responseType) throws RenderbaseException {
+    public <T> T get(String path, Map<String, String> queryParams, Class<T> responseType) throws RynkoException {
         HttpUrl.Builder urlBuilder = HttpUrl.parse(baseUrl + path).newBuilder();
         if (queryParams != null) {
             for (Map.Entry<String, String> entry : queryParams.entrySet()) {
@@ -131,7 +131,7 @@ public class HttpClient {
     /**
      * Makes a GET request with a TypeReference for generic types.
      */
-    public <T> T get(String path, Map<String, String> queryParams, TypeReference<T> typeReference) throws RenderbaseException {
+    public <T> T get(String path, Map<String, String> queryParams, TypeReference<T> typeReference) throws RynkoException {
         HttpUrl.Builder urlBuilder = HttpUrl.parse(baseUrl + path).newBuilder();
         if (queryParams != null) {
             for (Map.Entry<String, String> entry : queryParams.entrySet()) {
@@ -155,14 +155,14 @@ public class HttpClient {
     /**
      * Makes a POST request.
      */
-    public <T> T post(String path, Object body, Class<T> responseType) throws RenderbaseException {
+    public <T> T post(String path, Object body, Class<T> responseType) throws RynkoException {
         return post(path, body, responseType, null);
     }
 
     /**
      * Makes a POST request with a TypeReference.
      */
-    public <T> T post(String path, Object body, TypeReference<T> typeReference) throws RenderbaseException {
+    public <T> T post(String path, Object body, TypeReference<T> typeReference) throws RynkoException {
         try {
             String jsonBody = objectMapper.writeValueAsString(body);
             RequestBody requestBody = RequestBody.create(jsonBody, JSON);
@@ -178,11 +178,11 @@ public class HttpClient {
 
             return executeWithRetry(request, typeReference);
         } catch (IOException e) {
-            throw new RenderbaseException("Failed to serialize request body", e);
+            throw new RynkoException("Failed to serialize request body", e);
         }
     }
 
-    private <T> T post(String path, Object body, Class<T> responseType, Void unused) throws RenderbaseException {
+    private <T> T post(String path, Object body, Class<T> responseType, Void unused) throws RynkoException {
         try {
             String jsonBody = objectMapper.writeValueAsString(body);
             RequestBody requestBody = RequestBody.create(jsonBody, JSON);
@@ -198,14 +198,14 @@ public class HttpClient {
 
             return executeWithRetry(request, responseType);
         } catch (IOException e) {
-            throw new RenderbaseException("Failed to serialize request body", e);
+            throw new RynkoException("Failed to serialize request body", e);
         }
     }
 
     /**
      * Makes a PUT request.
      */
-    public <T> T put(String path, Object body, Class<T> responseType) throws RenderbaseException {
+    public <T> T put(String path, Object body, Class<T> responseType) throws RynkoException {
         try {
             String jsonBody = objectMapper.writeValueAsString(body);
             RequestBody requestBody = RequestBody.create(jsonBody, JSON);
@@ -221,14 +221,14 @@ public class HttpClient {
 
             return executeWithRetry(request, responseType);
         } catch (IOException e) {
-            throw new RenderbaseException("Failed to serialize request body", e);
+            throw new RynkoException("Failed to serialize request body", e);
         }
     }
 
     /**
      * Makes a PATCH request.
      */
-    public <T> T patch(String path, Object body, Class<T> responseType) throws RenderbaseException {
+    public <T> T patch(String path, Object body, Class<T> responseType) throws RynkoException {
         try {
             String jsonBody = objectMapper.writeValueAsString(body);
             RequestBody requestBody = RequestBody.create(jsonBody, JSON);
@@ -244,14 +244,14 @@ public class HttpClient {
 
             return executeWithRetry(request, responseType);
         } catch (IOException e) {
-            throw new RenderbaseException("Failed to serialize request body", e);
+            throw new RynkoException("Failed to serialize request body", e);
         }
     }
 
     /**
      * Makes a DELETE request.
      */
-    public void delete(String path) throws RenderbaseException {
+    public void delete(String path) throws RynkoException {
         Request request = new Request.Builder()
                 .url(baseUrl + path)
                 .delete()
@@ -265,7 +265,7 @@ public class HttpClient {
     /**
      * Makes a GET request to an absolute URL (not relative to base URL).
      */
-    public <T> T getAbsolute(String absoluteUrl, Class<T> responseType) throws RenderbaseException {
+    public <T> T getAbsolute(String absoluteUrl, Class<T> responseType) throws RynkoException {
         Request request = new Request.Builder()
                 .url(absoluteUrl)
                 .get()
@@ -280,7 +280,7 @@ public class HttpClient {
     /**
      * Makes a GET request to an absolute URL with query parameters.
      */
-    public <T> T getAbsolute(String absoluteUrl, Map<String, String> queryParams, TypeReference<T> typeReference) throws RenderbaseException {
+    public <T> T getAbsolute(String absoluteUrl, Map<String, String> queryParams, TypeReference<T> typeReference) throws RynkoException {
         HttpUrl.Builder urlBuilder = HttpUrl.parse(absoluteUrl).newBuilder();
         if (queryParams != null) {
             for (Map.Entry<String, String> entry : queryParams.entrySet()) {
@@ -311,9 +311,9 @@ public class HttpClient {
         return baseUrl;
     }
 
-    private <T> T executeWithRetry(Request request, Class<T> responseType) throws RenderbaseException {
+    private <T> T executeWithRetry(Request request, Class<T> responseType) throws RynkoException {
         int maxAttempts = config.isRetryEnabled() ? config.getMaxRetries() : 1;
-        RenderbaseException lastError = null;
+        RynkoException lastError = null;
 
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             try (Response response = client.newCall(request).execute()) {
@@ -342,10 +342,10 @@ public class HttpClient {
 
                 return objectMapper.readValue(responseBody, responseType);
             } catch (IOException e) {
-                throw new RenderbaseException("Request failed", e);
+                throw new RynkoException("Request failed", e);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new RenderbaseException("Request interrupted during retry", e);
+                throw new RynkoException("Request interrupted during retry", e);
             }
         }
 
@@ -354,12 +354,12 @@ public class HttpClient {
             throw lastError;
         }
 
-        throw new RenderbaseException("Request failed after retries", null, 0);
+        throw new RynkoException("Request failed after retries", null, 0);
     }
 
-    private <T> T executeWithRetry(Request request, TypeReference<T> typeReference) throws RenderbaseException {
+    private <T> T executeWithRetry(Request request, TypeReference<T> typeReference) throws RynkoException {
         int maxAttempts = config.isRetryEnabled() ? config.getMaxRetries() : 1;
-        RenderbaseException lastError = null;
+        RynkoException lastError = null;
 
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             try (Response response = client.newCall(request).execute()) {
@@ -388,10 +388,10 @@ public class HttpClient {
 
                 return objectMapper.readValue(responseBody, typeReference);
             } catch (IOException e) {
-                throw new RenderbaseException("Request failed", e);
+                throw new RynkoException("Request failed", e);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new RenderbaseException("Request interrupted during retry", e);
+                throw new RynkoException("Request interrupted during retry", e);
             }
         }
 
@@ -400,12 +400,12 @@ public class HttpClient {
             throw lastError;
         }
 
-        throw new RenderbaseException("Request failed after retries", null, 0);
+        throw new RynkoException("Request failed after retries", null, 0);
     }
 
-    private void executeVoidWithRetry(Request request) throws RenderbaseException {
+    private void executeVoidWithRetry(Request request) throws RynkoException {
         int maxAttempts = config.isRetryEnabled() ? config.getMaxRetries() : 1;
-        RenderbaseException lastError = null;
+        RynkoException lastError = null;
 
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             try (Response response = client.newCall(request).execute()) {
@@ -429,10 +429,10 @@ public class HttpClient {
                 }
                 return;
             } catch (IOException e) {
-                throw new RenderbaseException("Request failed", e);
+                throw new RynkoException("Request failed", e);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new RenderbaseException("Request interrupted during retry", e);
+                throw new RynkoException("Request interrupted during retry", e);
             }
         }
 
@@ -441,24 +441,24 @@ public class HttpClient {
             throw lastError;
         }
 
-        throw new RenderbaseException("Request failed after retries", null, 0);
+        throw new RynkoException("Request failed after retries", null, 0);
     }
 
-    private RenderbaseException createExceptionFromResponse(int statusCode, String responseBody) {
+    private RynkoException createExceptionFromResponse(int statusCode, String responseBody) {
         try {
             ApiError error = objectMapper.readValue(responseBody, ApiError.class);
-            return new RenderbaseException(error.getMessage(), error.getCode(), statusCode);
+            return new RynkoException(error.getMessage(), error.getCode(), statusCode);
         } catch (IOException e) {
-            return new RenderbaseException("HTTP " + statusCode + ": " + responseBody, null, statusCode);
+            return new RynkoException("HTTP " + statusCode + ": " + responseBody, null, statusCode);
         }
     }
 
-    private void handleError(int statusCode, String responseBody) throws RenderbaseException {
+    private void handleError(int statusCode, String responseBody) throws RynkoException {
         try {
             ApiError error = objectMapper.readValue(responseBody, ApiError.class);
-            throw new RenderbaseException(error.getMessage(), error.getCode(), statusCode);
+            throw new RynkoException(error.getMessage(), error.getCode(), statusCode);
         } catch (IOException e) {
-            throw new RenderbaseException("HTTP " + statusCode + ": " + responseBody, null, statusCode);
+            throw new RynkoException("HTTP " + statusCode + ": " + responseBody, null, statusCode);
         }
     }
 

@@ -1,12 +1,12 @@
-package com.renderbase.resources;
+package dev.rynko.resources;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.renderbase.exceptions.RenderbaseException;
-import com.renderbase.exceptions.WebhookSignatureException;
-import com.renderbase.models.ListResponse;
-import com.renderbase.models.PaginationMeta;
-import com.renderbase.utils.HttpClient;
+import dev.rynko.exceptions.RynkoException;
+import dev.rynko.exceptions.WebhookSignatureException;
+import dev.rynko.models.ListResponse;
+import dev.rynko.models.PaginationMeta;
+import dev.rynko.utils.HttpClient;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -21,13 +21,13 @@ import java.util.Map;
  * Resource for webhook operations and signature verification.
  *
  * <p>Use this resource to list webhook subscriptions and verify incoming webhook signatures.
- * Webhook subscriptions are managed through the Renderbase dashboard.</p>
+ * Webhook subscriptions are managed through the Rynko dashboard.</p>
  *
  * <h2>Signature Verification Example:</h2>
  * <pre>{@code
  * String payload = request.getBody();
- * String signature = request.getHeader("X-Renderbase-Signature");
- * String timestamp = request.getHeader("X-Renderbase-Timestamp");
+ * String signature = request.getHeader("X-Rynko-Signature");
+ * String timestamp = request.getHeader("X-Rynko-Timestamp");
  *
  * try {
  *     client.webhooks().verifySignature(payload, signature, timestamp, webhookSecret);
@@ -55,9 +55,9 @@ public class WebhooksResource {
      * Lists webhook subscriptions.
      *
      * @return Paginated list of webhook subscriptions
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<WebhookSubscription> list() throws RenderbaseException {
+    public ListResponse<WebhookSubscription> list() throws RynkoException {
         return list(null, null);
     }
 
@@ -67,9 +67,9 @@ public class WebhooksResource {
      * @param page  Page number (1-based)
      * @param limit Number of items per page
      * @return Paginated list of webhook subscriptions
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public ListResponse<WebhookSubscription> list(Integer page, Integer limit) throws RenderbaseException {
+    public ListResponse<WebhookSubscription> list(Integer page, Integer limit) throws RynkoException {
         int effectiveLimit = limit != null ? limit : 20;
         int effectivePage = page != null ? page : 1;
 
@@ -115,21 +115,21 @@ public class WebhooksResource {
      *
      * @param webhookId The webhook subscription ID
      * @return The webhook subscription
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public WebhookSubscription get(String webhookId) throws RenderbaseException {
+    public WebhookSubscription get(String webhookId) throws RynkoException {
         return httpClient.get("/webhook-subscriptions/" + webhookId, WebhookSubscription.class);
     }
 
     /**
      * Verifies a webhook signature.
      *
-     * <p>This method validates that a webhook payload was sent by Renderbase
+     * <p>This method validates that a webhook payload was sent by Rynko
      * and has not been tampered with.</p>
      *
      * @param payload   The raw request body
-     * @param signature The X-Renderbase-Signature header value
-     * @param timestamp The X-Renderbase-Timestamp header value
+     * @param signature The X-Rynko-Signature header value
+     * @param timestamp The X-Rynko-Timestamp header value
      * @param secret    Your webhook signing secret
      * @throws WebhookSignatureException if the signature is invalid or expired
      */
@@ -175,13 +175,13 @@ public class WebhooksResource {
      *
      * @param payload The raw request body
      * @return The parsed webhook event
-     * @throws RenderbaseException if parsing fails
+     * @throws RynkoException if parsing fails
      */
-    public WebhookEvent constructEvent(String payload) throws RenderbaseException {
+    public WebhookEvent constructEvent(String payload) throws RynkoException {
         try {
             return httpClient.getObjectMapper().readValue(payload, WebhookEvent.class);
         } catch (Exception e) {
-            throw new RenderbaseException("Failed to parse webhook event", e);
+            throw new RynkoException("Failed to parse webhook event", e);
         }
     }
 
@@ -189,15 +189,15 @@ public class WebhooksResource {
      * Verifies signature and constructs event in one call.
      *
      * @param payload   The raw request body
-     * @param signature The X-Renderbase-Signature header value
-     * @param timestamp The X-Renderbase-Timestamp header value
+     * @param signature The X-Rynko-Signature header value
+     * @param timestamp The X-Rynko-Timestamp header value
      * @param secret    Your webhook signing secret
      * @return The parsed webhook event
      * @throws WebhookSignatureException if the signature is invalid
-     * @throws RenderbaseException       if parsing fails
+     * @throws RynkoException       if parsing fails
      */
     public WebhookEvent constructEvent(String payload, String signature, String timestamp, String secret)
-            throws WebhookSignatureException, RenderbaseException {
+            throws WebhookSignatureException, RynkoException {
         verifySignature(payload, signature, timestamp, secret);
         return constructEvent(payload);
     }

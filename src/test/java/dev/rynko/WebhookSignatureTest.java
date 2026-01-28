@@ -1,7 +1,7 @@
-package com.renderbase;
+package dev.rynko;
 
-import com.renderbase.exceptions.WebhookSignatureException;
-import com.renderbase.resources.WebhooksResource;
+import dev.rynko.exceptions.WebhookSignatureException;
+import dev.rynko.resources.WebhooksResource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +21,7 @@ public class WebhookSignatureTest {
 
     @BeforeEach
     void setUp() {
-        Renderbase client = new Renderbase("test-api-key");
+        Rynko client = new Rynko("test-api-key");
         webhooksResource = client.webhooks();
     }
 

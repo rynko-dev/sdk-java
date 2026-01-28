@@ -1,24 +1,24 @@
-package com.renderbase.exceptions;
+package dev.rynko.exceptions;
 
 /**
- * Exception thrown when an error occurs during Renderbase API operations.
+ * Exception thrown when an error occurs during Rynko API operations.
  */
-public class RenderbaseException extends RuntimeException {
+public class RynkoException extends RuntimeException {
 
     private final String code;
     private final int statusCode;
 
-    public RenderbaseException(String message) {
+    public RynkoException(String message) {
         this(message, null, 0);
     }
 
-    public RenderbaseException(String message, Throwable cause) {
+    public RynkoException(String message, Throwable cause) {
         super(message, cause);
         this.code = null;
         this.statusCode = 0;
     }
 
-    public RenderbaseException(String message, String code, int statusCode) {
+    public RynkoException(String message, String code, int statusCode) {
         super(message);
         this.code = code;
         this.statusCode = statusCode;
@@ -44,7 +44,7 @@ public class RenderbaseException extends RuntimeException {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("RenderbaseException{");
+        StringBuilder sb = new StringBuilder("RynkoException{");
         sb.append("message='").append(getMessage()).append("'");
         if (code != null) {
             sb.append(", code='").append(code).append("'");

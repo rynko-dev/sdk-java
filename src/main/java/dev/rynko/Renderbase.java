@@ -1,21 +1,21 @@
-package com.renderbase;
+package dev.rynko;
 
-import com.renderbase.exceptions.RenderbaseException;
-import com.renderbase.models.User;
-import com.renderbase.resources.DocumentsResource;
-import com.renderbase.resources.TemplatesResource;
-import com.renderbase.resources.WebhooksResource;
-import com.renderbase.utils.HttpClient;
+import dev.rynko.exceptions.RynkoException;
+import dev.rynko.models.User;
+import dev.rynko.resources.DocumentsResource;
+import dev.rynko.resources.TemplatesResource;
+import dev.rynko.resources.WebhooksResource;
+import dev.rynko.utils.HttpClient;
 
 /**
- * Renderbase Java SDK client.
+ * Rynko Java SDK client.
  *
- * <p>The main entry point for interacting with the Renderbase API.
+ * <p>The main entry point for interacting with the Rynko API.
  * Use this client to generate PDF and Excel documents from templates.</p>
  *
  * <h2>Example usage:</h2>
  * <pre>{@code
- * Renderbase client = new Renderbase("your-api-key");
+ * Rynko client = new Rynko("your-api-key");
  *
  * // Generate a PDF document
  * Map<String, Object> variables = new HashMap<>();
@@ -35,9 +35,9 @@ import com.renderbase.utils.HttpClient;
  *
  * @since 1.0.0
  */
-public class Renderbase {
+public class Rynko {
 
-    private static final String DEFAULT_BASE_URL = "https://api.renderbase.dev/api/v1";
+    private static final String DEFAULT_BASE_URL = "https://api.rynko.dev/api/v1";
 
     private final HttpClient httpClient;
     private final DocumentsResource documents;
@@ -45,30 +45,30 @@ public class Renderbase {
     private final WebhooksResource webhooks;
 
     /**
-     * Creates a new Renderbase client with the specified API key.
+     * Creates a new Rynko client with the specified API key.
      *
-     * @param apiKey Your Renderbase API key
+     * @param apiKey Your Rynko API key
      */
-    public Renderbase(String apiKey) {
+    public Rynko(String apiKey) {
         this(apiKey, DEFAULT_BASE_URL);
     }
 
     /**
-     * Creates a new Renderbase client with a custom base URL.
+     * Creates a new Rynko client with a custom base URL.
      *
-     * @param apiKey  Your Renderbase API key
+     * @param apiKey  Your Rynko API key
      * @param baseUrl Custom API base URL
      */
-    public Renderbase(String apiKey, String baseUrl) {
-        this(new RenderbaseConfig(apiKey, baseUrl));
+    public Rynko(String apiKey, String baseUrl) {
+        this(new RynkoConfig(apiKey, baseUrl));
     }
 
     /**
-     * Creates a new Renderbase client with the specified configuration.
+     * Creates a new Rynko client with the specified configuration.
      *
      * @param config Client configuration
      */
-    public Renderbase(RenderbaseConfig config) {
+    public Rynko(RynkoConfig config) {
         if (config.getApiKey() == null || config.getApiKey().isEmpty()) {
             throw new IllegalArgumentException("API key is required");
         }
@@ -110,9 +110,9 @@ public class Renderbase {
      * Gets the current authenticated user.
      *
      * @return The authenticated user
-     * @throws RenderbaseException if the request fails
+     * @throws RynkoException if the request fails
      */
-    public User me() throws RenderbaseException {
+    public User me() throws RynkoException {
         String authUrl = httpClient.getBaseUrlWithoutVersion() + "/api/auth/verify";
         return httpClient.getAbsolute(authUrl, User.class);
     }
@@ -132,11 +132,11 @@ public class Renderbase {
     }
 
     /**
-     * Creates a new builder for Renderbase configuration.
+     * Creates a new builder for Rynko configuration.
      *
      * @return Configuration builder
      */
-    public static RenderbaseConfig.Builder builder() {
-        return new RenderbaseConfig.Builder();
+    public static RynkoConfig.Builder builder() {
+        return new RynkoConfig.Builder();
     }
 }

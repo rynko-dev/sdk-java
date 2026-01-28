@@ -1,33 +1,33 @@
-package com.renderbase;
+package dev.rynko;
 
-import com.renderbase.exceptions.RenderbaseException;
-import com.renderbase.models.*;
-import com.renderbase.resources.WebhooksResource.WebhookSubscription;
+import dev.rynko.exceptions.RynkoException;
+import dev.rynko.models.*;
+import dev.rynko.resources.WebhooksResource.WebhookSubscription;
 
 import java.util.*;
 
 /**
- * Renderbase Java SDK Integration Tests
+ * Rynko Java SDK Integration Tests
  *
  * Run these tests against a live API to verify SDK functionality.
  *
  * Prerequisites:
- * 1. Set RENDERBASE_API_KEY environment variable
- * 2. Set RENDERBASE_API_URL environment variable (optional, defaults to https://api.renderbase.dev)
+ * 1. Set RYNKO_API_KEY environment variable
+ * 2. Set RYNKO_API_URL environment variable (optional, defaults to https://api.rynko.dev)
  * 3. Have at least one template created in your workspace
  *
  * Usage:
- *   RENDERBASE_API_KEY=your_key mvn test -Dtest=IntegrationTest
+ *   RYNKO_API_KEY=your_key mvn test -Dtest=IntegrationTest
  *
  * Or run directly:
- *   RENDERBASE_API_KEY=your_key java -cp target/test-classes:target/classes com.renderbase.IntegrationTest
+ *   RYNKO_API_KEY=your_key java -cp target/test-classes:target/classes com.rynko.IntegrationTest
  */
 public class IntegrationTest {
 
-    private static final String API_KEY = System.getenv("RENDERBASE_API_KEY");
-    private static final String API_URL = System.getenv().getOrDefault("RENDERBASE_API_URL", "https://api.renderbase.dev");
+    private static final String API_KEY = System.getenv("RYNKO_API_KEY");
+    private static final String API_URL = System.getenv().getOrDefault("RYNKO_API_URL", "https://api.rynko.dev");
 
-    private static Renderbase client;
+    private static Rynko client;
     private static String templateId = null;
     private static Map<String, Object> templateVariables = new HashMap<>();
     private static String jobId = null;
@@ -55,13 +55,13 @@ public class IntegrationTest {
 
     public static void main(String[] args) {
         if (API_KEY == null || API_KEY.isEmpty()) {
-            System.err.println("❌ RENDERBASE_API_KEY environment variable is required");
+            System.err.println("❌ RYNKO_API_KEY environment variable is required");
             System.exit(1);
         }
 
-        client = new Renderbase(API_KEY, API_URL + "/api/v1");
+        client = new Rynko(API_KEY, API_URL + "/api/v1");
 
-        System.out.println("\n🧪 Renderbase Java SDK Integration Tests\n");
+        System.out.println("\n🧪 Rynko Java SDK Integration Tests\n");
         System.out.println("API URL: " + API_URL);
         System.out.println("API Key: " + API_KEY.substring(0, Math.min(10, API_KEY.length())) + "...");
         System.out.println("\n---\n");
@@ -76,7 +76,7 @@ public class IntegrationTest {
         // ==========================================
 
         test("client.me() - Get authenticated user", () -> {
-            com.renderbase.models.User user = client.me();
+            com.rynko.models.User user = client.me();
             if (user.getId() == null || user.getEmail() == null) {
                 throw new Exception("Invalid user response");
             }
@@ -268,7 +268,7 @@ public class IntegrationTest {
             try {
                 client.templates().get("invalid-template-id-12345");
                 throw new Exception("Expected error for invalid template");
-            } catch (RenderbaseException e) {
+            } catch (RynkoException e) {
                 System.out.println("  Error code: " + e.getCode());
                 System.out.println("  Status: " + e.getStatusCode());
                 // Test passed

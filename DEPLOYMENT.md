@@ -1,6 +1,6 @@
 # Java SDK Deployment Guide
 
-This guide covers publishing and maintaining the Renderbase Java SDK (`com.renderbase:sdk`).
+This guide covers publishing and maintaining the Rynko Java SDK (`com.rynko:sdk`).
 
 ## Prerequisites
 
@@ -15,14 +15,14 @@ This guide covers publishing and maintaining the Renderbase Java SDK (`com.rende
 ```
 sdk-java/
 ├── src/
-│   ├── main/java/com/renderbase/
-│   │   ├── Renderbase.java           # Main client class
-│   │   ├── RenderbaseConfig.java     # Configuration builder
+│   ├── main/java/com/rynko/
+│   │   ├── Rynko.java           # Main client class
+│   │   ├── RynkoConfig.java     # Configuration builder
 │   │   ├── exceptions/               # Exception classes
 │   │   ├── models/                   # Request/response models
 │   │   ├── resources/                # API resource classes
 │   │   └── utils/                    # HTTP client utilities
-│   └── test/java/com/renderbase/     # Unit tests
+│   └── test/java/com/rynko/     # Unit tests
 ├── pom.xml
 ├── README.md
 └── LICENSE
@@ -60,7 +60,7 @@ This creates:
 
 1. **Create Sonatype OSSRH Account**:
    - Register at https://issues.sonatype.org/
-   - Create a new project ticket for `com.renderbase` group ID
+   - Create a new project ticket for `com.rynko` group ID
    - Wait for approval (usually 1-2 business days)
 
 2. **Generate GPG Key**:
@@ -177,32 +177,32 @@ Maintain `CHANGELOG.md`:
 
 Users should set:
 ```bash
-export RENDERBASE_API_KEY=your_api_key
+export RYNKO_API_KEY=your_api_key
 ```
 
 ### SDK Configuration
 
 ```java
-import com.renderbase.Renderbase;
-import com.renderbase.RenderbaseConfig;
+import com.rynko.Rynko;
+import com.rynko.RynkoConfig;
 
 // Simple initialization
-Renderbase client = new Renderbase("your-api-key");
+Rynko client = new Rynko("your-api-key");
 
 // Advanced configuration
-RenderbaseConfig config = RenderbaseConfig.builder()
-    .apiKey(System.getenv("RENDERBASE_API_KEY"))
-    .baseUrl("https://api.renderbase.dev/api/v1")
+RynkoConfig config = RynkoConfig.builder()
+    .apiKey(System.getenv("RYNKO_API_KEY"))
+    .baseUrl("https://api.rynko.dev/api/v1")
     .timeoutMs(60000)
     .build();
-Renderbase client = new Renderbase(config);
+Rynko client = new Rynko(config);
 ```
 
 ## API Compatibility
 
 ### Backend Requirements
 
-The SDK requires these Renderbase API endpoints:
+The SDK requires these Rynko API endpoints:
 
 | Endpoint | SDK Method |
 |----------|------------|
@@ -233,8 +233,8 @@ mvn test
 
 Create `src/test/resources/test.properties`:
 ```properties
-renderbase.api.key=test_api_key
-renderbase.base.url=http://localhost:3000/api/v1
+rynko.api.key=test_api_key
+rynko.base.url=http://localhost:3000/api/v1
 ```
 
 Run integration tests:
@@ -253,13 +253,13 @@ Coverage report in `target/site/jacoco/index.html`.
 ### Manual Testing
 
 ```java
-import com.renderbase.Renderbase;
-import com.renderbase.models.GenerateRequest;
-import com.renderbase.models.GenerateResult;
+import com.rynko.Rynko;
+import com.rynko.models.GenerateRequest;
+import com.rynko.models.GenerateResult;
 
 public class ManualTest {
     public static void main(String[] args) {
-        Renderbase client = new Renderbase("your_test_key");
+        Rynko client = new Rynko("your_test_key");
 
         // Queue document generation
         GenerateResult job = client.documents().generate(
@@ -312,7 +312,7 @@ Update `README.md` with:
    - Ensure all required metadata is in pom.xml
 
 3. **Build Errors**
-   - Clear local Maven cache: `rm -rf ~/.m2/repository/com/renderbase`
+   - Clear local Maven cache: `rm -rf ~/.m2/repository/com/rynko`
    - Update Maven: `mvn -v`
 
 4. **Runtime Errors**
@@ -322,8 +322,8 @@ Update `README.md` with:
 ### Support Channels
 
 - GitHub Issues: Report bugs and feature requests
-- Email: sdk-support@renderbase.dev
-- Documentation: https://docs.renderbase.dev/sdk/java
+- Email: sdk-support@rynko.dev
+- Documentation: https://docs.rynko.dev/sdk/java
 
 ## Security
 
@@ -349,7 +349,7 @@ mvn org.owasp:dependency-check-maven:check
 
 ### Vulnerability Disclosure
 
-Report security issues to: security@renderbase.dev
+Report security issues to: security@rynko.dev
 
 ## Framework Examples
 
@@ -357,28 +357,28 @@ Report security issues to: security@renderbase.dev
 
 ```java
 @Configuration
-public class RenderbaseConfig {
+public class RynkoConfig {
 
-    @Value("${renderbase.api-key}")
+    @Value("${rynko.api-key}")
     private String apiKey;
 
     @Bean
-    public Renderbase renderbase() {
-        return new Renderbase(apiKey);
+    public Rynko rynko() {
+        return new Rynko(apiKey);
     }
 }
 
 @Service
 public class DocumentService {
 
-    private final Renderbase renderbase;
+    private final Rynko rynko;
 
-    public DocumentService(Renderbase renderbase) {
-        this.renderbase = renderbase;
+    public DocumentService(Rynko rynko) {
+        this.rynko = rynko;
     }
 
     public String generateInvoice(Invoice invoice) {
-        GenerateResult job = renderbase.documents().generate(
+        GenerateResult job = rynko.documents().generate(
             GenerateRequest.builder()
                 .templateId("tmpl_invoice")
                 .format("pdf")
@@ -386,7 +386,7 @@ public class DocumentService {
                 .build()
         );
 
-        GenerateResult completed = renderbase.documents().waitForCompletion(job.getJobId());
+        GenerateResult completed = rynko.documents().waitForCompletion(job.getJobId());
         return completed.getDownloadUrl();
     }
 }
@@ -396,14 +396,14 @@ public class DocumentService {
 
 ```java
 @Singleton
-public class RenderbaseFactory {
+public class RynkoFactory {
 
-    @Property(name = "renderbase.api-key")
+    @Property(name = "rynko.api-key")
     private String apiKey;
 
     @Singleton
-    public Renderbase renderbase() {
-        return new Renderbase(apiKey);
+    public Rynko rynko() {
+        return new Rynko(apiKey);
     }
 }
 ```
@@ -412,15 +412,15 @@ public class RenderbaseFactory {
 
 ```java
 @ApplicationScoped
-public class RenderbaseProducer {
+public class RynkoProducer {
 
-    @ConfigProperty(name = "renderbase.api-key")
+    @ConfigProperty(name = "rynko.api-key")
     String apiKey;
 
     @Produces
     @ApplicationScoped
-    public Renderbase renderbase() {
-        return new Renderbase(apiKey);
+    public Rynko rynko() {
+        return new Rynko(apiKey);
     }
 }
 ```
