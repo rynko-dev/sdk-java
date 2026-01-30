@@ -11,7 +11,7 @@
 
     <name>Rynko Java SDK</name>
     <description>Official Java SDK for Rynko - Generate PDFs and Excel files from templates</description>
-    <url>https://github.com/rynko/sdk-java</url>
+    <url>https://github.com/rynko-dev/sdk-java</url>
 
     <licenses>
         <license>
@@ -30,9 +30,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/rynko/sdk-java.git</connection>
-        <developerConnection>scm:git:ssh://github.com:rynko/sdk-java.git</developerConnection>
-        <url>https://github.com/rynko/sdk-java/tree/main</url>
+        <connection>scm:git:git://github.com/rynko-dev/sdk-java.git</connection>
+        <developerConnection>scm:git:ssh://github.com:rynko-dev/sdk-java.git</developerConnection>
+        <url>https://github.com/rynko-dev/sdk-java/tree/main</url>
     </scm>
 
     <properties>
@@ -124,17 +124,6 @@
         </plugins>
     </build>
 
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
-
     <profiles>
         <profile>
             <id>release</id>
@@ -155,14 +144,13 @@
                         </executions>
                     </plugin>
                     <plugin>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <version>1.6.13</version>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.6.0</version>
                         <extensions>true</extensions>
                         <configuration>
-                            <serverId>ossrh</serverId>
-                            <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
-                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
                         </configuration>
                     </plugin>
                 </plugins>

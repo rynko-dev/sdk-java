@@ -20,7 +20,7 @@ import java.util.*;
  *   RYNKO_API_KEY=your_key mvn test -Dtest=IntegrationTest
  *
  * Or run directly:
- *   RYNKO_API_KEY=your_key java -cp target/test-classes:target/classes com.rynko.IntegrationTest
+ *   RYNKO_API_KEY=your_key java -cp target/test-classes:target/classes dev.rynko.IntegrationTest
  */
 public class IntegrationTest {
 
@@ -76,7 +76,7 @@ public class IntegrationTest {
         // ==========================================
 
         test("client.me() - Get authenticated user", () -> {
-            com.rynko.models.User user = client.me();
+            User user = client.me();
             if (user.getId() == null || user.getEmail() == null) {
                 throw new Exception("Invalid user response");
             }
