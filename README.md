@@ -2,7 +2,7 @@
 
 Official Java SDK for [Rynko](https://rynko.dev) - the document generation platform with unified template design for PDF and Excel documents.
 
-[![Maven Central](https://img.shields.io/maven-central/v/com.rynko/sdk.svg)](https://search.maven.org/artifact/com.rynko/sdk)
+[![Maven Central](https://img.shields.io/maven-central/v/dev.rynko/sdk.svg)](https://search.maven.org/artifact/dev.rynko/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Table of Contents
@@ -47,7 +47,7 @@ Add to your `pom.xml`:
 
 ```xml
 <dependency>
-    <groupId>com.rynko</groupId>
+    <groupId>dev.rynko</groupId>
     <artifactId>sdk</artifactId>
     <version>1.0.0</version>
 </dependency>
@@ -58,21 +58,21 @@ Add to your `pom.xml`:
 Add to your `build.gradle`:
 
 ```groovy
-implementation 'com.rynko:sdk:1.0.0'
+implementation 'dev.rynko:sdk:1.0.0'
 ```
 
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("com.rynko:sdk:1.0.0")
+implementation("dev.rynko:sdk:1.0.0")
 ```
 
 ## Quick Start
 
 ```java
-import com.rynko.Rynko;
-import com.rynko.models.GenerateRequest;
-import com.rynko.models.GenerateResult;
+import dev.rynko.Rynko;
+import dev.rynko.models.GenerateRequest;
+import dev.rynko.models.GenerateResult;
 
 public class Example {
     public static void main(String[] args) {
@@ -129,8 +129,8 @@ public class Example {
 ### Initialize the Client
 
 ```java
-import com.rynko.Rynko;
-import com.rynko.models.User;
+import dev.rynko.Rynko;
+import dev.rynko.models.User;
 
 // Using environment variable (recommended)
 Rynko client = new Rynko(System.getenv("RYNKO_API_KEY"));
@@ -156,8 +156,8 @@ Document generation in Rynko is **asynchronous**. When you call `generate()`, th
 ### Generate PDF
 
 ```java
-import com.rynko.models.GenerateRequest;
-import com.rynko.models.GenerateResult;
+import dev.rynko.models.GenerateRequest;
+import dev.rynko.models.GenerateResult;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -294,7 +294,7 @@ try (FileOutputStream fos = new FileOutputStream("document.pdf")) {
 ### Get Job Status
 
 ```java
-import com.rynko.models.GenerateResult;
+import dev.rynko.models.GenerateResult;
 
 GenerateResult job = client.documents().get("job_abc123");
 
@@ -320,8 +320,8 @@ if (job.isFailed()) {
 ### List Jobs
 
 ```java
-import com.rynko.models.ListResponse;
-import com.rynko.models.GenerateResult;
+import dev.rynko.models.ListResponse;
+import dev.rynko.models.GenerateResult;
 
 // List recent jobs with pagination
 ListResponse<GenerateResult> result = client.documents().list(1, 20);
@@ -363,8 +363,8 @@ ListResponse<GenerateResult> filteredJobs = client.documents().list(
 ### List Templates
 
 ```java
-import com.rynko.models.ListResponse;
-import com.rynko.models.Template;
+import dev.rynko.models.ListResponse;
+import dev.rynko.models.Template;
 
 // List all templates
 ListResponse<Template> result = client.templates().list();
@@ -390,8 +390,8 @@ ListResponse<Template> excelOnly = client.templates().listExcel();
 ### Get Template Details
 
 ```java
-import com.rynko.models.Template;
-import com.rynko.models.TemplateVariable;
+import dev.rynko.models.Template;
+import dev.rynko.models.TemplateVariable;
 
 // Get template by ID (supports UUID, shortId, or slug)
 Template template = client.templates().get("tmpl_invoice");
@@ -422,8 +422,8 @@ Webhook subscriptions are managed through the [Rynko Dashboard](https://app.rynk
 ### List Webhooks
 
 ```java
-import com.rynko.models.ListResponse;
-import com.rynko.resources.WebhooksResource.WebhookSubscription;
+import dev.rynko.models.ListResponse;
+import dev.rynko.resources.WebhooksResource.WebhookSubscription;
 
 ListResponse<WebhookSubscription> result = client.webhooks().list();
 
@@ -451,8 +451,8 @@ System.out.println("Description: " + webhook.getDescription());
 When receiving webhooks, always verify the signature to ensure the request came from Rynko:
 
 ```java
-import com.rynko.resources.WebhooksResource.WebhookEvent;
-import com.rynko.exceptions.WebhookSignatureException;
+import dev.rynko.resources.WebhooksResource.WebhookEvent;
+import dev.rynko.exceptions.WebhookSignatureException;
 
 // In your webhook endpoint handler (e.g., Spring Controller, Servlet)
 public void handleWebhook(HttpServletRequest request, HttpServletResponse response)
@@ -537,9 +537,9 @@ private void handleDocumentDownloaded(WebhookEvent event) {
 ```java
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
-import com.rynko.Rynko;
-import com.rynko.resources.WebhooksResource.WebhookEvent;
-import com.rynko.exceptions.WebhookSignatureException;
+import dev.rynko.Rynko;
+import dev.rynko.resources.WebhooksResource.WebhookEvent;
+import dev.rynko.exceptions.WebhookSignatureException;
 
 @RestController
 @RequestMapping("/webhooks")
@@ -639,7 +639,7 @@ Rynko client = new Rynko(
 ### Advanced Configuration
 
 ```java
-import com.rynko.RynkoConfig;
+import dev.rynko.RynkoConfig;
 
 RynkoConfig config = RynkoConfig.builder()
     .apiKey(System.getenv("RYNKO_API_KEY"))
@@ -653,7 +653,7 @@ Rynko client = new Rynko(config);
 ## Error Handling
 
 ```java
-import com.rynko.exceptions.RynkoException;
+import dev.rynko.exceptions.RynkoException;
 
 try {
     GenerateResult result = client.documents().generate(request);
@@ -730,8 +730,8 @@ GenerateResult job = RynkoClient.getInstance().documents().generate(request);
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
-import com.rynko.Rynko;
-import com.rynko.RynkoConfig;
+import dev.rynko.Rynko;
+import dev.rynko.RynkoConfig;
 
 @Configuration
 public class RynkoConfiguration {
@@ -771,9 +771,9 @@ rynko.webhook-secret=${WEBHOOK_SECRET}
 
 ```java
 import org.springframework.stereotype.Service;
-import com.rynko.Rynko;
-import com.rynko.models.GenerateRequest;
-import com.rynko.models.GenerateResult;
+import dev.rynko.Rynko;
+import dev.rynko.models.GenerateRequest;
+import dev.rynko.models.GenerateResult;
 
 @Service
 public class DocumentService {
@@ -903,5 +903,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - **Documentation**: https://docs.rynko.dev/sdk/java
 - **API Reference**: https://docs.rynko.dev/api
-- **GitHub Issues**: https://github.com/rynko/sdk-java/issues
+- **GitHub Issues**: https://github.com/rynko-dev/sdk-java/issues
 - **Email**: support@rynko.dev

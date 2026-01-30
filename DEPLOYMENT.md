@@ -1,6 +1,6 @@
 # Java SDK Deployment Guide
 
-This guide covers publishing and maintaining the Rynko Java SDK (`com.rynko:sdk`).
+This guide covers publishing and maintaining the Rynko Java SDK (`dev.rynko:sdk`).
 
 ## Prerequisites
 
@@ -60,7 +60,7 @@ This creates:
 
 1. **Create Sonatype OSSRH Account**:
    - Register at https://issues.sonatype.org/
-   - Create a new project ticket for `com.rynko` group ID
+   - Create a new project ticket for `dev.rynko` group ID
    - Wait for approval (usually 1-2 business days)
 
 2. **Generate GPG Key**:
@@ -183,8 +183,8 @@ export RYNKO_API_KEY=your_api_key
 ### SDK Configuration
 
 ```java
-import com.rynko.Rynko;
-import com.rynko.RynkoConfig;
+import dev.rynko.Rynko;
+import dev.rynko.RynkoConfig;
 
 // Simple initialization
 Rynko client = new Rynko("your-api-key");
@@ -253,9 +253,9 @@ Coverage report in `target/site/jacoco/index.html`.
 ### Manual Testing
 
 ```java
-import com.rynko.Rynko;
-import com.rynko.models.GenerateRequest;
-import com.rynko.models.GenerateResult;
+import dev.rynko.Rynko;
+import dev.rynko.models.GenerateRequest;
+import dev.rynko.models.GenerateResult;
 
 public class ManualTest {
     public static void main(String[] args) {
