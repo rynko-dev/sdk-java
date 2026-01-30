@@ -895,6 +895,17 @@ public class InvoiceController {
 | `constructEvent(payload)` | `WebhookEvent` | Parse webhook event from payload |
 | `constructEvent(payload, signature, timestamp, secret)` | `WebhookEvent` | Verify and parse webhook event |
 
+## Examples
+
+See the [`examples/`](./examples) directory for runnable code samples:
+
+- [BasicGenerate.java](./src/main/java/dev/rynko/examples/BasicGenerate.java) - Generate a PDF and wait for completion
+- [BatchGenerate.java](./src/main/java/dev/rynko/examples/BatchGenerate.java) - Generate multiple documents
+- [WebhookHandler.java](./src/main/java/dev/rynko/examples/WebhookHandler.java) - Spring Boot webhook handler
+- [ErrorHandling.java](./src/main/java/dev/rynko/examples/ErrorHandling.java) - Handle API errors
+
+For complete project templates with full setup, see the [developer-resources](https://github.com/rynko-dev/developer-resources) repository.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
@@ -903,5 +914,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - **Documentation**: https://docs.rynko.dev/sdk/java
 - **API Reference**: https://docs.rynko.dev/api
+- **Examples**: https://github.com/rynko-dev/developer-resources
 - **GitHub Issues**: https://github.com/rynko-dev/sdk-java/issues
 - **Email**: support@rynko.dev
