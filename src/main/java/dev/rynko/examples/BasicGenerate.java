@@ -7,6 +7,9 @@ import dev.rynko.models.ListResponse;
 import dev.rynko.models.Template;
 import dev.rynko.models.User;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Basic Document Generation Example
  *
@@ -44,13 +47,21 @@ public class BasicGenerate {
             Template template = templates.getData().get(0);
             System.out.println("Using template: " + template.getName() + " (" + template.getId() + ")");
 
-            // Queue document generation
+            // Prepare metadata for tracking (optional)
+            // Metadata is returned in job status and webhook payloads
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("orderId", "ord_12345");
+            metadata.put("customerId", "cust_67890");
+            metadata.put("priority", 1);
+
+            // Queue document generation with metadata
             GenerateResult job = client.documents().generate(
                 GenerateRequest.builder()
                     .templateId(template.getId())
                     .format("pdf")
                     .variable("title", "Example Document")
                     .variable("date", "2025-01-30")
+                    .metadata(metadata)  // Attach metadata for tracking
                     .build()
             );
 
@@ -68,8 +79,16 @@ public class BasicGenerate {
             if ("completed".equals(completed.getStatus())) {
                 System.out.println("Document generated successfully!");
                 System.out.println("Download URL: " + completed.getDownloadUrl());
+
+                // Access metadata from the completed job
+                Map<String, Object> returnedMetadata = completed.getMetadata();
+                if (returnedMetadata != null) {
+                    System.out.println("Metadata: " + returnedMetadata);
+                    System.out.println("Order ID: " + returnedMetadata.get("orderId"));
+                }
             } else {
                 System.err.println("Generation failed: " + completed.getErrorMessage());
+                System.err.println("Error code: " + completed.getErrorCode());
             }
 
         } catch (Exception e) {

@@ -3,6 +3,7 @@ package dev.rynko.models;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
+import java.util.Map;
 
 /**
  * Result of a document generation request.
@@ -32,6 +33,15 @@ public class GenerateResult {
 
     @JsonProperty("templateId")
     private String templateId;
+
+    @JsonProperty("metadata")
+    private Map<String, Object> metadata;
+
+    @JsonProperty("errorMessage")
+    private String errorMessage;
+
+    @JsonProperty("errorCode")
+    private String errorCode;
 
     public GenerateResult() {
     }
@@ -101,6 +111,48 @@ public class GenerateResult {
     }
 
     /**
+     * Gets the custom metadata attached to this document.
+     *
+     * <p>Metadata is a flat key-value object passed during document generation.
+     * It is returned in job status responses and webhook payloads.</p>
+     *
+     * @return The metadata map, or null if no metadata was provided
+     */
+    public Map<String, Object> getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(Map<String, Object> metadata) {
+        this.metadata = metadata;
+    }
+
+    /**
+     * Gets the error message if the job failed.
+     *
+     * @return The error message, or null if the job did not fail
+     */
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    /**
+     * Gets the error code if the job failed.
+     *
+     * @return The error code, or null if the job did not fail
+     */
+    public String getErrorCode() {
+        return errorCode;
+    }
+
+    public void setErrorCode(String errorCode) {
+        this.errorCode = errorCode;
+    }
+
+    /**
      * Checks if the job is in a terminal state (completed or failed).
      *
      * @return true if the job is completed or failed
@@ -136,6 +188,7 @@ public class GenerateResult {
                 ", estimatedWaitSeconds=" + estimatedWaitSeconds +
                 ", downloadUrl='" + downloadUrl + '\'' +
                 ", format='" + format + '\'' +
+                ", metadata=" + metadata +
                 '}';
     }
 }

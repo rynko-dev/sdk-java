@@ -109,6 +109,72 @@ public class RynkoTest {
     }
 
     @Test
+    void testGenerateRequestWithMetadata() {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("orderId", "ord_12345");
+        metadata.put("customerId", "cust_67890");
+        metadata.put("priority", 1);
+        metadata.put("isUrgent", true);
+        metadata.put("discount", null);
+
+        GenerateRequest request = GenerateRequest.builder()
+                .templateId("tmpl_test")
+                .format("pdf")
+                .metadata(metadata)
+                .build();
+
+        assertNotNull(request.getMetadata());
+        assertEquals("ord_12345", request.getMetadata().get("orderId"));
+        assertEquals("cust_67890", request.getMetadata().get("customerId"));
+        assertEquals(1, request.getMetadata().get("priority"));
+        assertEquals(true, request.getMetadata().get("isUrgent"));
+        assertNull(request.getMetadata().get("discount"));
+    }
+
+    @Test
+    void testGenerateRequestMetadataTypes() {
+        // Test that metadata supports all valid types: string, number, boolean, null
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("stringValue", "hello");
+        metadata.put("intValue", 42);
+        metadata.put("floatValue", 3.14);
+        metadata.put("boolTrue", true);
+        metadata.put("boolFalse", false);
+        metadata.put("nullValue", null);
+
+        GenerateRequest request = GenerateRequest.builder()
+                .templateId("tmpl_test")
+                .metadata(metadata)
+                .build();
+
+        Map<String, Object> result = request.getMetadata();
+        assertEquals("hello", result.get("stringValue"));
+        assertEquals(42, result.get("intValue"));
+        assertEquals(3.14, result.get("floatValue"));
+        assertEquals(true, result.get("boolTrue"));
+        assertEquals(false, result.get("boolFalse"));
+        assertNull(result.get("nullValue"));
+    }
+
+    @Test
+    void testGenerateRequestWithVariablesAndMetadata() {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("invoiceNumber", "INV-001");
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("orderId", "ord_123");
+
+        GenerateRequest request = GenerateRequest.builder()
+                .templateId("tmpl_test")
+                .variables(variables)
+                .metadata(metadata)
+                .build();
+
+        assertEquals("INV-001", request.getVariables().get("invoiceNumber"));
+        assertEquals("ord_123", request.getMetadata().get("orderId"));
+    }
+
+    @Test
     void testConfigBuilderDefaults() {
         RynkoConfig config = RynkoConfig.builder()
                 .apiKey("test-key")

@@ -275,19 +275,32 @@ public class WebhooksResource {
 
     /**
      * Webhook event payload.
+     *
+     * <p>Event types:</p>
+     * <ul>
+     *   <li>{@code document.completed} - A document was successfully generated</li>
+     *   <li>{@code document.failed} - A document generation failed</li>
+     *   <li>{@code batch.completed} - A batch of documents completed</li>
+     * </ul>
      */
     public static class WebhookEvent {
         private String id;
         private String type;
-        private String createdAt;
+        private String timestamp;
         private Object data;
 
         public String getId() { return id; }
         public void setId(String id) { this.id = id; }
         public String getType() { return type; }
         public void setType(String type) { this.type = type; }
-        public String getCreatedAt() { return createdAt; }
-        public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+        public String getTimestamp() { return timestamp; }
+        public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
+        /** @deprecated Use {@link #getTimestamp()} instead */
+        @Deprecated
+        public String getCreatedAt() { return timestamp; }
+        /** @deprecated Use {@link #setTimestamp(String)} instead */
+        @Deprecated
+        public void setCreatedAt(String createdAt) { this.timestamp = createdAt; }
         public Object getData() { return data; }
         public void setData(Object data) { this.data = data; }
 
@@ -301,6 +314,190 @@ public class WebhooksResource {
         @SuppressWarnings("unchecked")
         public <T> T getDataAs(Class<T> type) {
             return (T) data;
+        }
+
+        /**
+         * Checks if this is a document event (completed or failed).
+         *
+         * @return true if this is a document event
+         */
+        public boolean isDocumentEvent() {
+            return "document.completed".equals(type) || "document.failed".equals(type);
+        }
+
+        /**
+         * Checks if this is a batch event.
+         *
+         * @return true if this is a batch event
+         */
+        public boolean isBatchEvent() {
+            return "batch.completed".equals(type);
+        }
+
+        /**
+         * Gets the data as a DocumentWebhookData object.
+         *
+         * <p>Use this for document.completed and document.failed events.</p>
+         *
+         * @return The document webhook data
+         * @throws ClassCastException if the data is not a Map
+         */
+        @SuppressWarnings("unchecked")
+        public DocumentWebhookData getDocumentData() {
+            if (data instanceof Map) {
+                return DocumentWebhookData.fromMap((Map<String, Object>) data);
+            }
+            throw new ClassCastException("Data is not a document webhook payload");
+        }
+
+        /**
+         * Gets the data as a BatchWebhookData object.
+         *
+         * <p>Use this for batch.completed events.</p>
+         *
+         * @return The batch webhook data
+         * @throws ClassCastException if the data is not a Map
+         */
+        @SuppressWarnings("unchecked")
+        public BatchWebhookData getBatchData() {
+            if (data instanceof Map) {
+                return BatchWebhookData.fromMap((Map<String, Object>) data);
+            }
+            throw new ClassCastException("Data is not a batch webhook payload");
+        }
+    }
+
+    /**
+     * Data payload for document webhook events (document.completed, document.failed).
+     *
+     * <p>This includes any custom metadata that was passed in the generate request.</p>
+     */
+    public static class DocumentWebhookData {
+        private String jobId;
+        private String status;
+        private String templateId;
+        private String format;
+        private String downloadUrl;
+        private Long fileSize;
+        private String errorMessage;
+        private String errorCode;
+        private Map<String, Object> metadata;
+
+        public String getJobId() { return jobId; }
+        public void setJobId(String jobId) { this.jobId = jobId; }
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+        public String getTemplateId() { return templateId; }
+        public void setTemplateId(String templateId) { this.templateId = templateId; }
+        public String getFormat() { return format; }
+        public void setFormat(String format) { this.format = format; }
+        public String getDownloadUrl() { return downloadUrl; }
+        public void setDownloadUrl(String downloadUrl) { this.downloadUrl = downloadUrl; }
+        public Long getFileSize() { return fileSize; }
+        public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
+        public String getErrorMessage() { return errorMessage; }
+        public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+        public String getErrorCode() { return errorCode; }
+        public void setErrorCode(String errorCode) { this.errorCode = errorCode; }
+
+        /**
+         * Gets the custom metadata attached to this document.
+         *
+         * <p>Metadata is a flat key-value object passed during document generation.
+         * Values can be strings, numbers, booleans, or null.</p>
+         *
+         * @return The metadata map, or null if no metadata was provided
+         */
+        public Map<String, Object> getMetadata() { return metadata; }
+        public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
+
+        @SuppressWarnings("unchecked")
+        static DocumentWebhookData fromMap(Map<String, Object> map) {
+            DocumentWebhookData data = new DocumentWebhookData();
+            data.jobId = (String) map.get("jobId");
+            data.status = (String) map.get("status");
+            data.templateId = (String) map.get("templateId");
+            data.format = (String) map.get("format");
+            data.downloadUrl = (String) map.get("downloadUrl");
+            Object fileSizeObj = map.get("fileSize");
+            if (fileSizeObj instanceof Number) {
+                data.fileSize = ((Number) fileSizeObj).longValue();
+            }
+            data.errorMessage = (String) map.get("errorMessage");
+            data.errorCode = (String) map.get("errorCode");
+            Object metadataObj = map.get("metadata");
+            if (metadataObj instanceof Map) {
+                data.metadata = (Map<String, Object>) metadataObj;
+            }
+            return data;
+        }
+    }
+
+    /**
+     * Data payload for batch webhook events (batch.completed).
+     *
+     * <p>This includes any custom batch-level metadata that was passed in the batch request.</p>
+     */
+    public static class BatchWebhookData {
+        private String batchId;
+        private String status;
+        private String templateId;
+        private String format;
+        private int totalJobs;
+        private int completedJobs;
+        private int failedJobs;
+        private Map<String, Object> metadata;
+
+        public String getBatchId() { return batchId; }
+        public void setBatchId(String batchId) { this.batchId = batchId; }
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+        public String getTemplateId() { return templateId; }
+        public void setTemplateId(String templateId) { this.templateId = templateId; }
+        public String getFormat() { return format; }
+        public void setFormat(String format) { this.format = format; }
+        public int getTotalJobs() { return totalJobs; }
+        public void setTotalJobs(int totalJobs) { this.totalJobs = totalJobs; }
+        public int getCompletedJobs() { return completedJobs; }
+        public void setCompletedJobs(int completedJobs) { this.completedJobs = completedJobs; }
+        public int getFailedJobs() { return failedJobs; }
+        public void setFailedJobs(int failedJobs) { this.failedJobs = failedJobs; }
+
+        /**
+         * Gets the custom batch-level metadata.
+         *
+         * <p>Metadata is a flat key-value object passed during batch generation.
+         * Values can be strings, numbers, booleans, or null.</p>
+         *
+         * @return The metadata map, or null if no metadata was provided
+         */
+        public Map<String, Object> getMetadata() { return metadata; }
+        public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
+
+        @SuppressWarnings("unchecked")
+        static BatchWebhookData fromMap(Map<String, Object> map) {
+            BatchWebhookData data = new BatchWebhookData();
+            data.batchId = (String) map.get("batchId");
+            data.status = (String) map.get("status");
+            data.templateId = (String) map.get("templateId");
+            data.format = (String) map.get("format");
+            Object totalObj = map.get("totalJobs");
+            if (totalObj instanceof Number) {
+                data.totalJobs = ((Number) totalObj).intValue();
+            }
+            Object completedObj = map.get("completedJobs");
+            if (completedObj instanceof Number) {
+                data.completedJobs = ((Number) completedObj).intValue();
+            }
+            Object failedObj = map.get("failedJobs");
+            if (failedObj instanceof Number) {
+                data.failedJobs = ((Number) failedObj).intValue();
+            }
+            Object metadataObj = map.get("metadata");
+            if (metadataObj instanceof Map) {
+                data.metadata = (Map<String, Object>) metadataObj;
+            }
+            return data;
         }
     }
 }

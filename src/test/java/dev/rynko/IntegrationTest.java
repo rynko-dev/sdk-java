@@ -181,6 +181,70 @@ public class IntegrationTest {
                 });
             }
 
+            // --- PDF Generation with Metadata ---
+            final String[] metadataJobId = {null};
+            final Map<String, Object> testMetadata = new HashMap<>();
+            testMetadata.put("orderId", "ord_test_12345");
+            testMetadata.put("customerId", "cust_test_67890");
+            testMetadata.put("priority", 1);
+            testMetadata.put("isTest", true);
+
+            test("documents.generate(pdf) - Generate PDF with metadata", () -> {
+                GenerateResult job = client.documents().generate(
+                    GenerateRequest.builder()
+                        .templateId(templateId)
+                        .format("pdf")
+                        .variables(templateVariables)
+                        .metadata(testMetadata)
+                        .build()
+                );
+
+                if (job.getJobId() == null || !"queued".equals(job.getStatus())) {
+                    throw new Exception("Invalid job response");
+                }
+
+                metadataJobId[0] = job.getJobId();
+                System.out.println("  Job ID: " + metadataJobId[0]);
+                System.out.println("  Status: " + job.getStatus());
+                System.out.println("  Metadata sent: " + testMetadata);
+            });
+
+            if (metadataJobId[0] != null) {
+                test("documents.waitForCompletion() - Verify metadata in completed job", () -> {
+                    GenerateResult completed = client.documents().waitForCompletion(metadataJobId[0], 1000, 60000);
+
+                    if (!"completed".equals(completed.getStatus()) && !"failed".equals(completed.getStatus())) {
+                        throw new Exception("Job not finished: " + completed.getStatus());
+                    }
+
+                    System.out.println("  Final status: " + completed.getStatus());
+
+                    // Verify metadata is returned
+                    Map<String, Object> returnedMetadata = completed.getMetadata();
+                    if (returnedMetadata == null) {
+                        throw new Exception("Metadata not returned in completed job");
+                    }
+
+                    if (!testMetadata.get("orderId").equals(returnedMetadata.get("orderId"))) {
+                        throw new Exception("Metadata orderId mismatch: expected " + testMetadata.get("orderId") + ", got " + returnedMetadata.get("orderId"));
+                    }
+
+                    if (!testMetadata.get("customerId").equals(returnedMetadata.get("customerId"))) {
+                        throw new Exception("Metadata customerId mismatch: expected " + testMetadata.get("customerId") + ", got " + returnedMetadata.get("customerId"));
+                    }
+
+                    // Note: numeric values may come back as different types (Integer vs Long)
+                    Object expectedPriority = testMetadata.get("priority");
+                    Object returnedPriority = returnedMetadata.get("priority");
+                    if (!String.valueOf(expectedPriority).equals(String.valueOf(returnedPriority))) {
+                        throw new Exception("Metadata priority mismatch: expected " + expectedPriority + ", got " + returnedPriority);
+                    }
+
+                    System.out.println("  Metadata returned: " + returnedMetadata);
+                    System.out.println("  ✓ All metadata fields verified");
+                });
+            }
+
             // --- Excel Generation ---
             final String[] excelJobId = {null};
 

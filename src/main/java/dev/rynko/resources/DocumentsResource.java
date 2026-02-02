@@ -22,13 +22,18 @@ import java.util.Map;
  *
  * <h2>Example:</h2>
  * <pre>{@code
- * // Queue document generation (async operation)
+ * // Queue document generation with metadata for tracking
+ * Map<String, Object> metadata = new HashMap<>();
+ * metadata.put("orderId", "ord_12345");
+ * metadata.put("customerId", "cust_67890");
+ *
  * GenerateResult job = client.documents().generate(
  *     GenerateRequest.builder()
  *         .templateId("tmpl_invoice")
  *         .format("pdf")
  *         .variable("invoiceNumber", "INV-001")
  *         .variable("customerName", "Acme Corp")
+ *         .metadata(metadata)  // Attach metadata for tracking
  *         .build()
  * );
  *
@@ -38,6 +43,10 @@ import java.util.Map;
  * // Wait for completion to get download URL
  * GenerateResult completed = client.documents().waitForCompletion(job.getJobId());
  * System.out.println("Download URL: " + completed.getDownloadUrl());
+ *
+ * // Metadata is returned in the completed job
+ * System.out.println("Metadata: " + completed.getMetadata());
+ * // Output: {orderId=ord_12345, customerId=cust_67890}
  * }</pre>
  *
  * @since 1.0.0

@@ -14,7 +14,8 @@ import java.util.Map;
 /**
  * Batch Document Generation Example
  *
- * <p>This example shows how to generate multiple documents in a single request.</p>
+ * <p>This example shows how to generate multiple documents with metadata
+ * for tracking purposes. Metadata is returned in webhook payloads.</p>
  *
  * <p>Usage:</p>
  * <pre>
@@ -44,30 +45,41 @@ public class BatchGenerate {
             Template template = templates.getData().get(0);
             System.out.println("Using template: " + template.getName());
 
-            // Prepare batch documents
-            List<Map<String, Object>> documents = Arrays.asList(
-                createInvoice("INV-001", "Alice", 150.00),
-                createInvoice("INV-002", "Bob", 275.50),
-                createInvoice("INV-003", "Charlie", 89.99)
+            // Prepare batch documents with metadata for tracking
+            List<InvoiceData> invoices = Arrays.asList(
+                new InvoiceData("INV-001", "Alice", 150.00, "ord_001", "cust_alice"),
+                new InvoiceData("INV-002", "Bob", 275.50, "ord_002", "cust_bob"),
+                new InvoiceData("INV-003", "Charlie", 89.99, "ord_003", "cust_charlie")
             );
 
-            // Generate multiple documents
-            // Note: The SDK may need a generateBatch method - this is a conceptual example
-            System.out.println("Generating " + documents.size() + " documents...");
+            // Generate multiple documents with metadata
+            System.out.println("Generating " + invoices.size() + " documents with metadata...");
 
-            for (Map<String, Object> docVars : documents) {
+            for (InvoiceData invoice : invoices) {
+                // Create metadata to track this document
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("orderId", invoice.orderId);
+                metadata.put("customerId", invoice.customerId);
+                metadata.put("invoiceNumber", invoice.invoiceNumber);
+
                 GenerateResult job = client.documents().generate(
                     GenerateRequest.builder()
                         .templateId(template.getId())
                         .format("pdf")
-                        .variables(docVars)
+                        .variable("invoiceNumber", invoice.invoiceNumber)
+                        .variable("customerName", invoice.customerName)
+                        .variable("total", invoice.total)
+                        .metadata(metadata)  // Attach metadata for tracking
                         .build()
                 );
-                System.out.println("Queued job: " + job.getJobId() + " for " + docVars.get("customerName"));
+                System.out.println("Queued job: " + job.getJobId() + " for " + invoice.customerName);
+                System.out.println("  Metadata: orderId=" + invoice.orderId);
             }
 
+            System.out.println();
             System.out.println("All documents queued!");
-            System.out.println("Use webhooks to get notified when each completes.");
+            System.out.println("Metadata will be returned in webhook payloads when each document completes.");
+            System.out.println("Use metadata to correlate completed documents with your orders.");
 
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
@@ -75,11 +87,22 @@ public class BatchGenerate {
         }
     }
 
-    private static Map<String, Object> createInvoice(String invoiceNumber, String customerName, double total) {
-        Map<String, Object> vars = new HashMap<>();
-        vars.put("invoiceNumber", invoiceNumber);
-        vars.put("customerName", customerName);
-        vars.put("total", total);
-        return vars;
+    /**
+     * Helper class to hold invoice data with tracking IDs.
+     */
+    private static class InvoiceData {
+        final String invoiceNumber;
+        final String customerName;
+        final double total;
+        final String orderId;
+        final String customerId;
+
+        InvoiceData(String invoiceNumber, String customerName, double total, String orderId, String customerId) {
+            this.invoiceNumber = invoiceNumber;
+            this.customerName = customerName;
+            this.total = total;
+            this.orderId = orderId;
+            this.customerId = customerId;
+        }
     }
 }
