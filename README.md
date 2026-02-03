@@ -506,8 +506,14 @@ private void handleDocumentGenerated(WebhookEvent event) {
     String jobId = (String) data.get("jobId");
     String downloadUrl = (String) data.get("downloadUrl");
     String templateId = (String) data.get("templateId");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> metadata = (Map<String, Object>) data.get("metadata");
 
     System.out.println("Document " + jobId + " ready: " + downloadUrl);
+    // Access metadata you passed during generation
+    if (metadata != null) {
+        System.out.println("Order ID: " + metadata.get("orderId"));
+    }
     // Download or process the document
 }
 
@@ -518,8 +524,14 @@ private void handleDocumentFailed(WebhookEvent event) {
     String jobId = (String) data.get("jobId");
     String error = (String) data.get("error");
     String errorCode = (String) data.get("errorCode");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> metadata = (Map<String, Object>) data.get("metadata");
 
     System.err.println("Document " + jobId + " failed: " + error);
+    // Access metadata for correlation
+    if (metadata != null) {
+        System.out.println("Failed order: " + metadata.get("orderId"));
+    }
     // Handle failure (retry, notify user, etc.)
 }
 
@@ -589,8 +601,8 @@ public class WebhookController {
 
 | Event | Description | Payload |
 |-------|-------------|---------|
-| `document.generated` | Document successfully generated | `jobId`, `templateId`, `format`, `downloadUrl`, `fileSize` |
-| `document.failed` | Document generation failed | `jobId`, `templateId`, `error`, `errorCode` |
+| `document.generated` | Document successfully generated | `jobId`, `templateId`, `format`, `downloadUrl`, `fileSize`, `metadata` |
+| `document.failed` | Document generation failed | `jobId`, `templateId`, `error`, `errorCode`, `metadata` |
 | `document.downloaded` | Document was downloaded | `jobId`, `downloadedAt` |
 
 #### Webhook Headers
