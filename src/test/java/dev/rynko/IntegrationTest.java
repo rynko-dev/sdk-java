@@ -248,11 +248,11 @@ public class IntegrationTest {
             // --- Excel Generation ---
             final String[] excelJobId = {null};
 
-            test("documents.generate(xlsx) - Generate Excel document", () -> {
+            test("documents.generate(excel) - Generate Excel document", () -> {
                 GenerateResult job = client.documents().generate(
                     GenerateRequest.builder()
                         .templateId(templateId)
-                        .format("xlsx")
+                        .format("excel")
                         .variables(templateVariables)
                         .build()
                 );
