@@ -28,6 +28,9 @@ public class GenerateRequest {
     @JsonProperty("metadata")
     private Map<String, Object> metadata;
 
+    @JsonProperty("source")
+    private String source;
+
     private GenerateRequest() {
     }
 
@@ -53,6 +56,10 @@ public class GenerateRequest {
 
     public Map<String, Object> getMetadata() {
         return metadata;
+    }
+
+    public String getSource() {
+        return source;
     }
 
     public static Builder builder() {
@@ -121,6 +128,8 @@ public class GenerateRequest {
             request.workspaceId = this.workspaceId;
             request.filename = this.filename;
             request.metadata = this.metadata;
+            // Automatically set source to identify SDK usage
+            request.source = "sdk_java";
             return request;
         }
     }
