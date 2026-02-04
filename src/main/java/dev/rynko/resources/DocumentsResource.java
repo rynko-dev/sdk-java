@@ -3,6 +3,9 @@ package dev.rynko.resources;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import dev.rynko.exceptions.RynkoException;
+import dev.rynko.models.BatchStatusResult;
+import dev.rynko.models.GenerateBatchRequest;
+import dev.rynko.models.GenerateBatchResult;
 import dev.rynko.models.GenerateRequest;
 import dev.rynko.models.GenerateResult;
 import dev.rynko.models.ListResponse;
@@ -68,6 +71,104 @@ public class DocumentsResource {
      */
     public GenerateResult generate(GenerateRequest request) throws RynkoException {
         return httpClient.post("/documents/generate", request, GenerateResult.class);
+    }
+
+    /**
+     * Generates multiple documents from a template in a single batch.
+     *
+     * <p>Batch generation is more efficient than making multiple individual requests
+     * when you need to generate many documents from the same template with different
+     * variable sets.</p>
+     *
+     * <h2>Example:</h2>
+     * <pre>{@code
+     * GenerateBatchResult result = client.documents().generateBatch(
+     *     GenerateBatchRequest.builder()
+     *         .templateId("tmpl_invoice")
+     *         .format("pdf")
+     *         .addDocument(BatchDocumentSpec.builder()
+     *             .variable("invoiceNumber", "INV-001")
+     *             .variable("customerName", "Acme Corp")
+     *             .metadata("orderId", "order_001")
+     *             .build())
+     *         .addDocument(BatchDocumentSpec.builder()
+     *             .variable("invoiceNumber", "INV-002")
+     *             .variable("customerName", "Globex Inc")
+     *             .metadata("orderId", "order_002")
+     *             .build())
+     *         .webhookUrl("https://example.com/webhook")
+     *         .build()
+     * );
+     *
+     * System.out.println("Batch ID: " + result.getBatchId());
+     * System.out.println("Total jobs: " + result.getTotalJobs());
+     * }</pre>
+     *
+     * @param request The batch generation request
+     * @return The batch result with batch ID and total job count
+     * @throws RynkoException if the request fails
+     */
+    public GenerateBatchResult generateBatch(GenerateBatchRequest request) throws RynkoException {
+        return httpClient.post("/documents/generate/batch", request, GenerateBatchResult.class);
+    }
+
+    /**
+     * Gets the status of a batch.
+     *
+     * @param batchId The batch ID (format: batch_xxxxxxxx)
+     * @return The batch status including progress information
+     * @throws RynkoException if the request fails
+     */
+    public BatchStatusResult getBatch(String batchId) throws RynkoException {
+        return httpClient.get("/documents/batches/" + batchId, BatchStatusResult.class);
+    }
+
+    /**
+     * Waits for a batch to complete.
+     *
+     * <p>Polls the batch status at regular intervals until it reaches a terminal state
+     * (completed, partial, or failed), or until the timeout is exceeded.</p>
+     *
+     * @param batchId The batch ID to wait for
+     * @return The completed batch status
+     * @throws RynkoException if the request fails
+     * @throws RuntimeException if the timeout is exceeded
+     */
+    public BatchStatusResult waitForBatchCompletion(String batchId) throws RynkoException {
+        return waitForBatchCompletion(batchId, 2000, 300000); // 2s poll, 5min timeout
+    }
+
+    /**
+     * Waits for a batch to complete with custom polling settings.
+     *
+     * @param batchId The batch ID to wait for
+     * @param pollIntervalMs Time between polls in milliseconds (default: 2000)
+     * @param timeoutMs Maximum wait time in milliseconds (default: 300000)
+     * @return The completed batch status
+     * @throws RynkoException if the request fails
+     * @throws RuntimeException if the timeout is exceeded
+     */
+    public BatchStatusResult waitForBatchCompletion(String batchId, long pollIntervalMs, long timeoutMs) throws RynkoException {
+        long startTime = System.currentTimeMillis();
+
+        while (true) {
+            BatchStatusResult batch = getBatch(batchId);
+
+            if (batch.isTerminal()) {
+                return batch;
+            }
+
+            if (System.currentTimeMillis() - startTime > timeoutMs) {
+                throw new RuntimeException("Timeout waiting for batch " + batchId + " to complete");
+            }
+
+            try {
+                Thread.sleep(pollIntervalMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Interrupted while waiting for batch " + batchId, e);
+            }
+        }
     }
 
     /**

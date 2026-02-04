@@ -1,21 +1,22 @@
 package dev.rynko.examples;
 
 import dev.rynko.Rynko;
-import dev.rynko.models.GenerateRequest;
-import dev.rynko.models.GenerateResult;
+import dev.rynko.models.BatchDocumentSpec;
+import dev.rynko.models.BatchStatusResult;
+import dev.rynko.models.GenerateBatchRequest;
+import dev.rynko.models.GenerateBatchResult;
 import dev.rynko.models.ListResponse;
 import dev.rynko.models.Template;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Batch Document Generation Example
  *
- * <p>This example shows how to generate multiple documents with metadata
- * for tracking purposes. Metadata is returned in webhook payloads.</p>
+ * <p>This example shows how to generate multiple documents in a single batch
+ * using the batch API. This is more efficient than making individual requests
+ * when generating many documents from the same template.</p>
  *
  * <p>Usage:</p>
  * <pre>
@@ -52,34 +53,51 @@ public class BatchGenerate {
                 new InvoiceData("INV-003", "Charlie", 89.99, "ord_003", "cust_charlie")
             );
 
-            // Generate multiple documents with metadata
-            System.out.println("Generating " + invoices.size() + " documents with metadata...");
+            // Build batch request
+            GenerateBatchRequest.Builder requestBuilder = GenerateBatchRequest.builder()
+                .templateId(template.getId())
+                .format("pdf");
 
+            // Add each invoice as a document in the batch
             for (InvoiceData invoice : invoices) {
-                // Create metadata to track this document
-                Map<String, Object> metadata = new HashMap<>();
-                metadata.put("orderId", invoice.orderId);
-                metadata.put("customerId", invoice.customerId);
-                metadata.put("invoiceNumber", invoice.invoiceNumber);
-
-                GenerateResult job = client.documents().generate(
-                    GenerateRequest.builder()
-                        .templateId(template.getId())
-                        .format("pdf")
+                requestBuilder.addDocument(
+                    BatchDocumentSpec.builder()
                         .variable("invoiceNumber", invoice.invoiceNumber)
                         .variable("customerName", invoice.customerName)
                         .variable("total", invoice.total)
-                        .metadata(metadata)  // Attach metadata for tracking
+                        .filename("invoice-" + invoice.invoiceNumber.toLowerCase())
+                        .metadata("orderId", invoice.orderId)
+                        .metadata("customerId", invoice.customerId)
                         .build()
                 );
-                System.out.println("Queued job: " + job.getJobId() + " for " + invoice.customerName);
-                System.out.println("  Metadata: orderId=" + invoice.orderId);
             }
 
-            System.out.println();
-            System.out.println("All documents queued!");
-            System.out.println("Metadata will be returned in webhook payloads when each document completes.");
-            System.out.println("Use metadata to correlate completed documents with your orders.");
+            GenerateBatchRequest request = requestBuilder.build();
+
+            // Submit the batch
+            System.out.println("Submitting batch of " + invoices.size() + " documents...");
+            GenerateBatchResult result = client.documents().generateBatch(request);
+
+            System.out.println("Batch submitted!");
+            System.out.println("  Batch ID: " + result.getBatchId());
+            System.out.println("  Total jobs: " + result.getTotalJobs());
+            System.out.println("  Status URL: " + result.getStatusUrl());
+
+            // Optionally wait for completion (for demo purposes)
+            System.out.println("\nWaiting for batch to complete...");
+            BatchStatusResult status = client.documents().waitForBatchCompletion(result.getBatchId());
+
+            System.out.println("\nBatch finished!");
+            System.out.println("  Status: " + status.getStatus());
+            System.out.println("  Completed: " + status.getCompletedJobs() + "/" + status.getTotalJobs());
+            if (status.getFailedJobs() > 0) {
+                System.out.println("  Failed: " + status.getFailedJobs());
+            }
+
+            // In production, you would typically:
+            // 1. Submit the batch and return immediately
+            // 2. Set up a webhook to receive notifications as each document completes
+            // 3. Use the metadata (orderId, customerId) to correlate completed documents
 
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
