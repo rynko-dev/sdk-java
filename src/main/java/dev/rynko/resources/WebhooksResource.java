@@ -278,7 +278,7 @@ public class WebhooksResource {
      *
      * <p>Event types:</p>
      * <ul>
-     *   <li>{@code document.completed} - A document was successfully generated</li>
+     *   <li>{@code document.generated} - A document was successfully generated</li>
      *   <li>{@code document.failed} - A document generation failed</li>
      *   <li>{@code batch.completed} - A batch of documents completed</li>
      * </ul>
@@ -322,7 +322,7 @@ public class WebhooksResource {
          * @return true if this is a document event
          */
         public boolean isDocumentEvent() {
-            return "document.completed".equals(type) || "document.failed".equals(type);
+            return "document.generated".equals(type) || "document.failed".equals(type);
         }
 
         /**
@@ -337,7 +337,7 @@ public class WebhooksResource {
         /**
          * Gets the data as a DocumentWebhookData object.
          *
-         * <p>Use this for document.completed and document.failed events.</p>
+         * <p>Use this for document.generated and document.failed events.</p>
          *
          * @return The document webhook data
          * @throws ClassCastException if the data is not a Map
@@ -368,7 +368,7 @@ public class WebhooksResource {
     }
 
     /**
-     * Data payload for document webhook events (document.completed, document.failed).
+     * Data payload for document webhook events (document.generated, document.failed).
      *
      * <p>This includes any custom metadata that was passed in the generate request.</p>
      */

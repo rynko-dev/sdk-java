@@ -27,7 +27,7 @@ public class WebhookSignatureTest {
 
     @Test
     void testValidSignature() throws Exception {
-        String payload = "{\"type\":\"document.completed\",\"data\":{\"id\":\"123\"}}";
+        String payload = "{\"type\":\"document.generated\",\"data\":{\"id\":\"123\"}}";
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
         String signature = "v1=" + computeSignature(timestamp + "." + payload, TEST_SECRET);
 
@@ -39,7 +39,7 @@ public class WebhookSignatureTest {
 
     @Test
     void testInvalidSignature() {
-        String payload = "{\"type\":\"document.completed\"}";
+        String payload = "{\"type\":\"document.generated\"}";
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
         String signature = "v1=invalid_signature";
 
@@ -50,7 +50,7 @@ public class WebhookSignatureTest {
 
     @Test
     void testExpiredTimestamp() throws Exception {
-        String payload = "{\"type\":\"document.completed\"}";
+        String payload = "{\"type\":\"document.generated\"}";
         // Timestamp from 10 minutes ago (beyond 5 minute tolerance)
         String timestamp = String.valueOf((System.currentTimeMillis() / 1000) - 600);
         String signature = "v1=" + computeSignature(timestamp + "." + payload, TEST_SECRET);
@@ -62,7 +62,7 @@ public class WebhookSignatureTest {
 
     @Test
     void testFutureTimestamp() throws Exception {
-        String payload = "{\"type\":\"document.completed\"}";
+        String payload = "{\"type\":\"document.generated\"}";
         // Timestamp from 10 minutes in the future (beyond 5 minute tolerance)
         String timestamp = String.valueOf((System.currentTimeMillis() / 1000) + 600);
         String signature = "v1=" + computeSignature(timestamp + "." + payload, TEST_SECRET);
@@ -93,7 +93,7 @@ public class WebhookSignatureTest {
 
     @Test
     void testInvalidTimestampFormat() {
-        String payload = "{\"type\":\"document.completed\"}";
+        String payload = "{\"type\":\"document.generated\"}";
         String signature = "v1=somesig";
 
         assertThrows(WebhookSignatureException.class, () -> {
@@ -103,7 +103,7 @@ public class WebhookSignatureTest {
 
     @Test
     void testSignatureWithoutPrefix() throws Exception {
-        String payload = "{\"type\":\"document.completed\"}";
+        String payload = "{\"type\":\"document.generated\"}";
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
         // Signature without v1= prefix
         String signature = computeSignature(timestamp + "." + payload, TEST_SECRET);
@@ -115,8 +115,8 @@ public class WebhookSignatureTest {
 
     @Test
     void testTamperedPayload() throws Exception {
-        String originalPayload = "{\"type\":\"document.completed\",\"data\":{\"id\":\"123\"}}";
-        String tamperedPayload = "{\"type\":\"document.completed\",\"data\":{\"id\":\"456\"}}";
+        String originalPayload = "{\"type\":\"document.generated\",\"data\":{\"id\":\"123\"}}";
+        String tamperedPayload = "{\"type\":\"document.generated\",\"data\":{\"id\":\"456\"}}";
         String timestamp = String.valueOf(System.currentTimeMillis() / 1000);
         String signature = "v1=" + computeSignature(timestamp + "." + originalPayload, TEST_SECRET);
 
@@ -129,12 +129,12 @@ public class WebhookSignatureTest {
     @Test
     void testConstructEventWithMetadata() throws Exception {
         // Test webhook event with metadata in the data payload
-        String payload = "{\"id\":\"evt_123\",\"type\":\"document.completed\",\"timestamp\":\"2025-02-02T12:00:00Z\",\"data\":{\"jobId\":\"job_456\",\"status\":\"completed\",\"downloadUrl\":\"https://example.com/download\",\"metadata\":{\"orderId\":\"ord_789\",\"customerId\":\"cust_012\",\"priority\":1}}}";
+        String payload = "{\"id\":\"evt_123\",\"type\":\"document.generated\",\"timestamp\":\"2025-02-02T12:00:00Z\",\"data\":{\"jobId\":\"job_456\",\"status\":\"completed\",\"downloadUrl\":\"https://example.com/download\",\"metadata\":{\"orderId\":\"ord_789\",\"customerId\":\"cust_012\",\"priority\":1}}}";
 
         WebhooksResource.WebhookEvent event = webhooksResource.constructEvent(payload);
 
         assertEquals("evt_123", event.getId());
-        assertEquals("document.completed", event.getType());
+        assertEquals("document.generated", event.getType());
         assertTrue(event.isDocumentEvent());
         assertFalse(event.isBatchEvent());
 
@@ -201,7 +201,7 @@ public class WebhookSignatureTest {
     @Test
     void testConstructEventWithoutMetadata() throws Exception {
         // Test event without metadata (should work without errors)
-        String payload = "{\"id\":\"evt_no_meta\",\"type\":\"document.completed\",\"timestamp\":\"2025-02-02T12:00:00Z\",\"data\":{\"jobId\":\"job_789\",\"status\":\"completed\",\"downloadUrl\":\"https://example.com/dl\"}}";
+        String payload = "{\"id\":\"evt_no_meta\",\"type\":\"document.generated\",\"timestamp\":\"2025-02-02T12:00:00Z\",\"data\":{\"jobId\":\"job_789\",\"status\":\"completed\",\"downloadUrl\":\"https://example.com/dl\"}}";
 
         WebhooksResource.WebhookEvent event = webhooksResource.constructEvent(payload);
 

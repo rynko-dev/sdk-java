@@ -49,7 +49,7 @@ Add to your `pom.xml`:
 <dependency>
     <groupId>dev.rynko</groupId>
     <artifactId>sdk</artifactId>
-    <version>1.0.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
@@ -58,13 +58,13 @@ Add to your `pom.xml`:
 Add to your `build.gradle`:
 
 ```groovy
-implementation 'dev.rynko:sdk:1.0.0'
+implementation 'dev.rynko:sdk:1.2.0'
 ```
 
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("dev.rynko:sdk:1.0.0")
+implementation("dev.rynko:sdk:1.2.0")
 ```
 
 ## Quick Start
@@ -138,7 +138,7 @@ Rynko client = new Rynko(System.getenv("RYNKO_API_KEY"));
 // Verify authentication
 User user = client.me();
 System.out.println("Authenticated as: " + user.getEmail());
-System.out.println("Team: " + user.getTeamName());
+System.out.println("Name: " + user.getName());
 ```
 
 ### Verify API Key
@@ -193,7 +193,7 @@ System.out.println("Download URL: " + completed.getDownloadUrl());
 GenerateResult job = client.documents().generate(
     GenerateRequest.builder()
         .templateId("tmpl_sales_report")
-        .format("xlsx")
+        .format("excel")
         .variable("reportTitle", "Q1 2026 Sales Report")
         .variable("reportDate", "2026-03-31")
         .variable("salesData", Arrays.asList(
@@ -218,7 +218,7 @@ The `GenerateRequest.Builder` provides a fluent API for constructing requests:
 GenerateRequest request = GenerateRequest.builder()
     // Required
     .templateId("tmpl_contract")
-    .format("pdf")  // "pdf", "xlsx", or "csv"
+    .format("pdf")  // "pdf", "excel", or "csv"
 
     // Add variables one at a time
     .variable("contractNumber", "CTR-2026-001")
@@ -235,13 +235,10 @@ GenerateRequest request = GenerateRequest.builder()
     // Optional settings
     .filename("contract-acme-2026")      // Custom filename (without extension)
     .workspaceId("ws_abc123")            // Generate in specific workspace
-    .webhookUrl("https://your-app.com/webhooks/document-ready")
     .metadata(Map.of(                     // Custom metadata (passed to webhook)
         "orderId", "ORD-12345",
         "userId", "user_abc"
     ))
-    .useDraft(false)                      // Use draft template version (for testing)
-    .useCredit(false)                     // Force use of purchased credits
     .build();
 
 GenerateResult job = client.documents().generate(request);
@@ -265,8 +262,7 @@ GenerateResult completed = client.documents().waitForCompletion(
 // Check result
 if (completed.isCompleted()) {
     System.out.println("Download URL: " + completed.getDownloadUrl());
-    System.out.println("File size: " + completed.getFileSize() + " bytes");
-    System.out.println("Expires at: " + completed.getDownloadUrlExpiresAt());
+    System.out.println("Expires at: " + completed.getExpiresAt());
 } else if (completed.isFailed()) {
     System.err.println("Generation failed: " + completed.getErrorMessage());
     System.err.println("Error code: " + completed.getErrorCode());
@@ -301,14 +297,12 @@ GenerateResult job = client.documents().get("job_abc123");
 System.out.println("Status: " + job.getStatus());
 // Possible values: "queued", "processing", "completed", "failed"
 
-System.out.println("Template: " + job.getTemplateName());
+System.out.println("Template ID: " + job.getTemplateId());
 System.out.println("Format: " + job.getFormat());
-System.out.println("Created: " + job.getCreatedAt());
 
 if (job.isCompleted()) {
     System.out.println("Download URL: " + job.getDownloadUrl());
-    System.out.println("File size: " + job.getFileSize());
-    System.out.println("URL expires: " + job.getDownloadUrlExpiresAt());
+    System.out.println("URL expires: " + job.getExpiresAt());
 }
 
 if (job.isFailed()) {
@@ -378,11 +372,10 @@ for (Template template : result.getData()) {
 // Paginated list
 ListResponse<Template> page2 = client.templates().list(2, 10);
 
-// Filter by type
-ListResponse<Template> pdfTemplates = client.templates().list(1, 20, "pdf");
-ListResponse<Template> excelTemplates = client.templates().list(1, 20, "excel");
+// Search by name
+ListResponse<Template> invoiceTemplates = client.templates().list(1, 20, "invoice");
 
-// Or use convenience methods
+// Filter by type using convenience methods
 ListResponse<Template> pdfOnly = client.templates().listPdf();
 ListResponse<Template> excelOnly = client.templates().listExcel();
 ```
@@ -476,10 +469,13 @@ public void handleWebhook(HttpServletRequest request, HttpServletResponse respon
 
         switch (event.getType()) {
             case "document.generated":
-                handleDocumentGenerated(event);
+                handleDocumentCompleted(event);
                 break;
             case "document.failed":
                 handleDocumentFailed(event);
+                break;
+            case "batch.completed":
+                handleBatchCompleted(event);
                 break;
             case "document.downloaded":
                 handleDocumentDownloaded(event);
@@ -499,7 +495,7 @@ public void handleWebhook(HttpServletRequest request, HttpServletResponse respon
     }
 }
 
-private void handleDocumentGenerated(WebhookEvent event) {
+private void handleDocumentCompleted(WebhookEvent event) {
     @SuppressWarnings("unchecked")
     Map<String, Object> data = (Map<String, Object>) event.getData();
 
@@ -522,12 +518,12 @@ private void handleDocumentFailed(WebhookEvent event) {
     Map<String, Object> data = (Map<String, Object>) event.getData();
 
     String jobId = (String) data.get("jobId");
-    String error = (String) data.get("error");
+    String errorMessage = (String) data.get("errorMessage");
     String errorCode = (String) data.get("errorCode");
     @SuppressWarnings("unchecked")
     Map<String, Object> metadata = (Map<String, Object>) data.get("metadata");
 
-    System.err.println("Document " + jobId + " failed: " + error);
+    System.err.println("Document " + jobId + " failed: " + errorMessage);
     // Access metadata for correlation
     if (metadata != null) {
         System.out.println("Failed order: " + metadata.get("orderId"));
@@ -535,12 +531,16 @@ private void handleDocumentFailed(WebhookEvent event) {
     // Handle failure (retry, notify user, etc.)
 }
 
-private void handleDocumentDownloaded(WebhookEvent event) {
+private void handleBatchCompleted(WebhookEvent event) {
     @SuppressWarnings("unchecked")
     Map<String, Object> data = (Map<String, Object>) event.getData();
 
-    String jobId = (String) data.get("jobId");
-    System.out.println("Document " + jobId + " was downloaded");
+    String batchId = (String) data.get("batchId");
+    int totalJobs = ((Number) data.get("totalJobs")).intValue();
+    int completedJobs = ((Number) data.get("completedJobs")).intValue();
+    int failedJobs = ((Number) data.get("failedJobs")).intValue();
+    System.out.println("Batch " + batchId + " done: " + completedJobs + "/" + totalJobs
+            + " succeeded, " + failedJobs + " failed");
 }
 ```
 
@@ -584,6 +584,9 @@ public class WebhookController {
                 case "document.failed":
                     // Handle document failure
                     break;
+                case "batch.completed":
+                    // Handle batch completion
+                    break;
             }
 
             return ResponseEntity.ok("OK");
@@ -602,8 +605,9 @@ public class WebhookController {
 | Event | Description | Payload |
 |-------|-------------|---------|
 | `document.generated` | Document successfully generated | `jobId`, `templateId`, `format`, `downloadUrl`, `fileSize`, `metadata` |
-| `document.failed` | Document generation failed | `jobId`, `templateId`, `error`, `errorCode`, `metadata` |
+| `document.failed` | Document generation failed | `jobId`, `templateId`, `errorMessage`, `errorCode`, `metadata` |
 | `document.downloaded` | Document was downloaded | `jobId`, `downloadedAt` |
+| `batch.completed` | Batch generation finished | `batchId`, `templateId`, `format`, `totalJobs`, `completedJobs`, `failedJobs`, `metadata` |
 
 #### Webhook Headers
 
@@ -611,7 +615,7 @@ Rynko sends these headers with each webhook request:
 
 | Header | Description |
 |--------|-------------|
-| `X-Rynko-Signature` | HMAC-SHA256 signature (format: `v1=<hex>`) |
+| `X-Rynko-Signature` | HMAC-SHA256 signature (format: `t=<timestamp>,v1=<hex>`) |
 | `X-Rynko-Timestamp` | Unix timestamp when the webhook was sent |
 | `X-Rynko-Event-Id` | Unique event identifier |
 | `X-Rynko-Event-Type` | Event type (e.g., `document.generated`) |
@@ -656,10 +660,20 @@ import dev.rynko.RynkoConfig;
 RynkoConfig config = RynkoConfig.builder()
     .apiKey(System.getenv("RYNKO_API_KEY"))
     .baseUrl("https://api.rynko.dev/api")
-    .timeoutMs(60000)  // 60 seconds
+    .timeoutMs(60000)              // 60 seconds (default: 30000)
+    .maxRetries(3)                 // Max retry attempts (default: 5)
+    .initialDelayMs(500)           // Initial retry delay (default: 1000)
+    .maxDelayMs(10000)             // Max retry delay (default: 30000)
+    .maxJitterMs(500)              // Max jitter (default: 1000)
     .build();
 
 Rynko client = new Rynko(config);
+
+// Disable retry entirely
+RynkoConfig noRetryConfig = RynkoConfig.builder()
+    .apiKey(System.getenv("RYNKO_API_KEY"))
+    .retryEnabled(false)
+    .build();
 ```
 
 ## Error Handling
@@ -889,7 +903,7 @@ public class InvoiceController {
 |--------|---------|-------------|
 | `list()` | `ListResponse<Template>` | List all templates |
 | `list(page, limit)` | `ListResponse<Template>` | List with pagination |
-| `list(page, limit, type)` | `ListResponse<Template>` | List with type filter ("pdf" or "excel") |
+| `list(page, limit, search)` | `ListResponse<Template>` | List with search filter |
 | `listPdf()` | `ListResponse<Template>` | List PDF templates only |
 | `listPdf(page, limit)` | `ListResponse<Template>` | List PDF templates with pagination |
 | `listExcel()` | `ListResponse<Template>` | List Excel templates only |

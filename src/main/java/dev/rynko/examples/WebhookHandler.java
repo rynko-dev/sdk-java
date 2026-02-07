@@ -44,7 +44,7 @@ import java.util.Map;
  *             );
  *
  *             switch (event.getType()) {
- *                 case "document.completed":
+ *                 case "document.generated":
  *                     handleDocumentCompleted(event);
  *                     break;
  *                 case "document.failed":
@@ -122,7 +122,7 @@ public class WebhookHandler {
         System.out.println("See the Javadoc above for a complete Spring Boot webhook handler.");
         System.out.println();
         System.out.println("Webhook event types:");
-        System.out.println("  - document.completed: Document was successfully generated");
+        System.out.println("  - document.generated: Document was successfully generated");
         System.out.println("  - document.failed: Document generation failed");
         System.out.println("  - batch.completed: Batch of documents completed");
         System.out.println();
