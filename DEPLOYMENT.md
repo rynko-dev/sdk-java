@@ -15,14 +15,14 @@ This guide covers publishing and maintaining the Rynko Java SDK (`dev.rynko:sdk`
 ```
 sdk-java/
 ├── src/
-│   ├── main/java/com/rynko/
+│   ├── main/java/dev/rynko/
 │   │   ├── Rynko.java           # Main client class
 │   │   ├── RynkoConfig.java     # Configuration builder
 │   │   ├── exceptions/               # Exception classes
 │   │   ├── models/                   # Request/response models
 │   │   ├── resources/                # API resource classes
 │   │   └── utils/                    # HTTP client utilities
-│   └── test/java/com/rynko/     # Unit tests
+│   └── test/java/dev/rynko/     # Unit tests
 ├── pom.xml
 ├── README.md
 └── LICENSE
@@ -211,9 +211,8 @@ The SDK requires these Rynko API endpoints:
 | `GET /api/v1/documents/jobs` | `client.documents().list()` |
 | `GET /api/v1/templates` | `client.templates().list()` |
 | `GET /api/v1/templates/:id` | `client.templates().get()` |
-| `POST /api/v1/webhook-subscriptions` | `client.webhooks().create()` |
 | `GET /api/v1/webhook-subscriptions` | `client.webhooks().list()` |
-| `DELETE /api/v1/webhook-subscriptions/:id` | `client.webhooks().delete()` |
+| `GET /api/v1/webhook-subscriptions/:id` | `client.webhooks().get()` |
 
 ### Java Version Compatibility
 
@@ -312,7 +311,7 @@ Update `README.md` with:
    - Ensure all required metadata is in pom.xml
 
 3. **Build Errors**
-   - Clear local Maven cache: `rm -rf ~/.m2/repository/com/rynko`
+   - Clear local Maven cache: `rm -rf ~/.m2/repository/dev/rynko`
    - Update Maven: `mvn -v`
 
 4. **Runtime Errors**

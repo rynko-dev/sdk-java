@@ -49,7 +49,7 @@ Add to your `pom.xml`:
 <dependency>
     <groupId>dev.rynko</groupId>
     <artifactId>sdk</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.1</version>
 </dependency>
 ```
 
@@ -58,13 +58,13 @@ Add to your `pom.xml`:
 Add to your `build.gradle`:
 
 ```groovy
-implementation 'dev.rynko:sdk:1.2.0'
+implementation 'dev.rynko:sdk:1.2.1'
 ```
 
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("dev.rynko:sdk:1.2.0")
+implementation("dev.rynko:sdk:1.2.1")
 ```
 
 ## Quick Start
@@ -324,7 +324,7 @@ System.out.println("Total jobs: " + result.getMeta().getTotal());
 System.out.println("Total pages: " + result.getMeta().getTotalPages());
 
 for (GenerateResult job : result.getData()) {
-    System.out.println(job.getJobId() + ": " + job.getStatus() + " - " + job.getTemplateName());
+    System.out.println(job.getJobId() + ": " + job.getStatus() + " - " + job.getTemplateId());
 }
 
 // Check for more pages
