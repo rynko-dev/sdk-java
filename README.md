@@ -113,7 +113,7 @@ public class Example {
 - **PDF generation** - Generate PDF documents from templates
 - **Excel generation** - Generate Excel spreadsheets from templates
 - **Batch generation** - Generate multiple documents in a single request
-- **Workspace support** - Generate documents in specific workspaces
+- **Environment support** - Generate documents in specific environments
 - **Webhook verification** - Secure HMAC signature verification for incoming webhooks
 - **Polling utility** - Built-in `waitForCompletion()` method with configurable timeout
 
@@ -234,7 +234,7 @@ GenerateRequest request = GenerateRequest.builder()
 
     // Optional settings
     .filename("contract-acme-2026")      // Custom filename (without extension)
-    .workspaceId("ws_abc123")            // Generate in specific workspace
+    .workspaceId("ws_abc123")            // Generate in specific environment
     .metadata(Map.of(                     // Custom metadata (passed to webhook)
         "orderId", "ORD-12345",
         "userId", "user_abc"
@@ -336,7 +336,7 @@ if (result.hasMore()) {
 // Filter by template
 ListResponse<GenerateResult> invoiceJobs = client.documents().list(1, 20, "tmpl_invoice", null);
 
-// Filter by workspace
+// Filter by environment
 ListResponse<GenerateResult> workspaceJobs = client.documents().list(1, 20, null, "ws_abc123");
 
 // Filter by status

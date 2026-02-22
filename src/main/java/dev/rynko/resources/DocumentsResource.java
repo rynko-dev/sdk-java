@@ -65,7 +65,7 @@ public class DocumentsResource {
     /**
      * Generates a document from a template.
      *
-     * @param request The generation request containing template ID, format, variables, and optional workspaceId
+     * @param request The generation request containing template ID, format, variables, and optional environment ID
      * @return The generation result with download URL
      * @throws RynkoException if the request fails
      */
@@ -210,7 +210,7 @@ public class DocumentsResource {
      * @param page        Page number (1-based)
      * @param limit       Number of items per page
      * @param templateId  Filter by template ID
-     * @param workspaceId Filter by workspace ID
+     * @param workspaceId Filter by environment ID
      * @return Paginated list of generation results
      * @throws RynkoException if the request fails
      */
@@ -224,7 +224,7 @@ public class DocumentsResource {
      * @param page        Page number (1-based)
      * @param limit       Number of items per page
      * @param templateId  Filter by template ID
-     * @param workspaceId Filter by workspace ID
+     * @param workspaceId Filter by environment ID
      * @param status      Filter by status (queued, processing, completed, failed)
      * @return Paginated list of generation results
      * @throws RynkoException if the request fails

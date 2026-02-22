@@ -95,10 +95,10 @@ public class GenerateRequest {
         }
 
         /**
-         * Sets the workspace ID to generate the document in.
-         * If not provided, defaults to the user's current workspace.
+         * Sets the environment ID to generate the document in.
+         * If not provided, defaults to the user's current environment.
          *
-         * @param workspaceId The workspace ID
+         * @param workspaceId The environment ID
          * @return This builder
          */
         public Builder workspaceId(String workspaceId) {
