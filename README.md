@@ -1,6 +1,6 @@
 # Rynko Java SDK
 
-Official Java SDK for [Rynko](https://rynko.dev) - the document generation platform with unified template design for PDF and Excel documents.
+Official Java SDK for [Rynko](https://rynko.dev) - the document generation and AI output validation platform with unified template design for PDF and Excel documents.
 
 [![Maven Central](https://img.shields.io/maven-central/v/dev.rynko/sdk.svg)](https://search.maven.org/artifact/dev.rynko/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -27,6 +27,11 @@ Official Java SDK for [Rynko](https://rynko.dev) - the document generation platf
 - [Webhooks](#webhooks)
   - [List Webhooks](#list-webhooks)
   - [Verify Webhook Signatures](#verify-webhook-signatures)
+- [Rynko Flow](#rynko-flow)
+  - [Submit and Wait for Run](#submit-and-wait-for-run)
+  - [List Gates](#list-gates)
+  - [Manage Approvals](#manage-approvals)
+  - [Monitor Deliveries](#monitor-deliveries)
 - [Configuration](#configuration)
 - [Error Handling](#error-handling)
 - [Thread Safety](#thread-safety)
@@ -49,7 +54,7 @@ Add to your `pom.xml`:
 <dependency>
     <groupId>dev.rynko</groupId>
     <artifactId>sdk</artifactId>
-    <version>1.2.1</version>
+    <version>1.3.0</version>
 </dependency>
 ```
 
@@ -58,13 +63,13 @@ Add to your `pom.xml`:
 Add to your `build.gradle`:
 
 ```groovy
-implementation 'dev.rynko:sdk:1.2.1'
+implementation 'dev.rynko:sdk:1.3.0'
 ```
 
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("dev.rynko:sdk:1.2.1")
+implementation("dev.rynko:sdk:1.3.0")
 ```
 
 ## Quick Start
@@ -116,6 +121,7 @@ public class Example {
 - **Environment support** - Generate documents in specific environments
 - **Webhook verification** - Secure HMAC signature verification for incoming webhooks
 - **Polling utility** - Built-in `waitForCompletion()` method with configurable timeout
+- **Rynko Flow** - Submit runs for validation, manage approvals, and monitor deliveries
 
 ## Authentication
 
@@ -637,6 +643,128 @@ try {
 WebhookEvent event = client.webhooks().constructEvent(payload);
 ```
 
+## Rynko Flow
+
+[Rynko Flow](https://rynko.dev/flow) is an AI output validation gateway. Define gates with schemas and business rules, submit data for validation, handle human-in-the-loop approvals, and track webhook deliveries.
+
+### Submit and Wait for Run
+
+```java
+import dev.rynko.models.FlowRun;
+import dev.rynko.models.SubmitRunRequest;
+
+// Submit data to a gate for validation
+FlowRun run = client.flow().submitRun("gate_abc123",
+    SubmitRunRequest.builder()
+        .inputField("customerName", "John Doe")
+        .inputField("email", "john@example.com")
+        .inputField("amount", 150.00)
+        .metadata("source", "checkout")
+        .webhookUrl("https://your-app.com/webhooks/flow")
+        .build()
+);
+
+System.out.println("Run ID: " + run.getId());
+System.out.println("Status: " + run.getStatus());  // "pending"
+
+// Wait for validation result (polls until terminal state)
+FlowRun result = client.flow().waitForRun(run.getId(), 2000, 120000);
+// pollIntervalMs: 2000 (default: 1000)
+// timeoutMs: 120000 (default: 60000)
+
+if ("approved".equals(result.getStatus())) {
+    System.out.println("Validation passed!");
+} else if ("rejected".equals(result.getStatus())) {
+    System.out.println("Validation failed: " + result.getErrors());
+} else if ("validation_failed".equals(result.getStatus())) {
+    System.out.println("Schema validation errors: " + result.getErrors());
+}
+```
+
+### List Gates
+
+```java
+import dev.rynko.models.FlowGate;
+import dev.rynko.models.ListResponse;
+
+// List all gates
+ListResponse<FlowGate> gates = client.flow().listGates();
+
+for (FlowGate gate : gates.getData()) {
+    System.out.println(gate.getId() + ": " + gate.getName() + " (" + gate.getStatus() + ")");
+}
+
+// Get a specific gate
+FlowGate gate = client.flow().getGate("gate_abc123");
+System.out.println("Gate: " + gate.getName());
+```
+
+### List and Filter Runs
+
+```java
+import dev.rynko.models.FlowRun;
+import dev.rynko.models.ListResponse;
+
+// List all runs
+ListResponse<FlowRun> runs = client.flow().listRuns();
+
+// Filter by status
+ListResponse<FlowRun> approved = client.flow().listRuns(1, 20, "approved");
+
+// List runs for a specific gate
+ListResponse<FlowRun> gateRuns = client.flow().listRunsByGate("gate_abc123");
+
+// List active (in-progress) runs
+ListResponse<FlowRun> active = client.flow().listActiveRuns();
+System.out.println(active.getData().size() + " runs in progress");
+
+// Get a specific run
+FlowRun run = client.flow().getRun("run_abc123");
+System.out.println("Status: " + run.getStatus());
+```
+
+### Manage Approvals
+
+When a gate has approval rules, runs may enter a `review_required` state:
+
+```java
+import dev.rynko.models.FlowApproval;
+import dev.rynko.models.ListResponse;
+
+// List pending approvals
+ListResponse<FlowApproval> approvals = client.flow().listApprovals(1, 20, "pending");
+
+for (FlowApproval approval : approvals.getData()) {
+    System.out.println("Approval " + approval.getId() + " for run " + approval.getRunId());
+
+    // Approve with a note
+    client.flow().approve(approval.getId(), "Looks good, approved.");
+
+    // Or reject with a reason
+    // client.flow().reject(approval.getId(), "Amount exceeds limit.");
+}
+```
+
+### Monitor Deliveries
+
+Track webhook deliveries for completed runs:
+
+```java
+import dev.rynko.models.FlowDelivery;
+import dev.rynko.models.ListResponse;
+
+// List deliveries for a run
+ListResponse<FlowDelivery> deliveries = client.flow().listDeliveries("run_abc123");
+
+for (FlowDelivery delivery : deliveries.getData()) {
+    System.out.println(delivery.getId() + ": " + delivery.getStatus() + " → " + delivery.getUrl());
+}
+
+// Retry a failed delivery
+FlowDelivery retried = client.flow().retryDelivery("delivery_abc123");
+System.out.println("Retry status: " + retried.getStatus());
+```
+
 ## Configuration
 
 ### Basic Configuration
@@ -881,6 +1009,7 @@ public class InvoiceController {
 | `documents()` | `DocumentsResource` | Access document generation operations |
 | `templates()` | `TemplatesResource` | Access template operations |
 | `webhooks()` | `WebhooksResource` | Access webhook operations |
+| `flow()` | `FlowResource` | Access Flow operations |
 
 ### DocumentsResource
 
@@ -921,6 +1050,33 @@ public class InvoiceController {
 | `constructEvent(payload)` | `WebhookEvent` | Parse webhook event from payload |
 | `constructEvent(payload, signature, timestamp, secret)` | `WebhookEvent` | Verify and parse webhook event |
 
+### FlowResource
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `listGates()` | `ListResponse<FlowGate>` | List all gates |
+| `listGates(page, limit, status)` | `ListResponse<FlowGate>` | List gates with filters |
+| `getGate(gateId)` | `FlowGate` | Get gate by ID |
+| `submitRun(gateId, request)` | `FlowRun` | Submit a run for validation |
+| `getRun(runId)` | `FlowRun` | Get run by ID |
+| `listRuns()` | `ListResponse<FlowRun>` | List all runs |
+| `listRuns(page, limit, status)` | `ListResponse<FlowRun>` | List runs with filters |
+| `listRunsByGate(gateId)` | `ListResponse<FlowRun>` | List runs for a gate |
+| `listRunsByGate(gateId, page, limit, status)` | `ListResponse<FlowRun>` | List runs for a gate with filters |
+| `listActiveRuns()` | `ListResponse<FlowRun>` | List active runs |
+| `listActiveRuns(page, limit)` | `ListResponse<FlowRun>` | List active runs with pagination |
+| `waitForRun(runId)` | `FlowRun` | Poll until run reaches terminal state |
+| `waitForRun(runId, pollIntervalMs, timeoutMs)` | `FlowRun` | Poll with custom settings |
+| `listApprovals()` | `ListResponse<FlowApproval>` | List approvals |
+| `listApprovals(page, limit, status)` | `ListResponse<FlowApproval>` | List approvals with filters |
+| `approve(approvalId)` | `FlowApproval` | Approve a pending approval |
+| `approve(approvalId, note)` | `FlowApproval` | Approve with a note |
+| `reject(approvalId)` | `FlowApproval` | Reject a pending approval |
+| `reject(approvalId, reason)` | `FlowApproval` | Reject with a reason |
+| `listDeliveries(runId)` | `ListResponse<FlowDelivery>` | List deliveries for a run |
+| `listDeliveries(runId, page, limit)` | `ListResponse<FlowDelivery>` | List deliveries with pagination |
+| `retryDelivery(deliveryId)` | `FlowDelivery` | Retry a failed delivery |
+
 ## Examples
 
 See the [`examples/`](./examples) directory for runnable code samples:
@@ -929,6 +1085,8 @@ See the [`examples/`](./examples) directory for runnable code samples:
 - [BatchGenerate.java](./src/main/java/dev/rynko/examples/BatchGenerate.java) - Generate multiple documents
 - [WebhookHandler.java](./src/main/java/dev/rynko/examples/WebhookHandler.java) - Spring Boot webhook handler
 - [ErrorHandling.java](./src/main/java/dev/rynko/examples/ErrorHandling.java) - Handle API errors
+- [FlowSubmitAndWait.java](./src/main/java/dev/rynko/examples/FlowSubmitAndWait.java) - Submit a run and wait for validation
+- [FlowApprovalWorkflow.java](./src/main/java/dev/rynko/examples/FlowApprovalWorkflow.java) - Programmatic approval automation
 
 For complete project templates with full setup, see the [developer-resources](https://github.com/rynko-dev/developer-resources) repository.
 
