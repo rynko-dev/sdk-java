@@ -3,6 +3,7 @@ package dev.rynko;
 import dev.rynko.exceptions.RynkoException;
 import dev.rynko.models.User;
 import dev.rynko.resources.DocumentsResource;
+import dev.rynko.resources.FlowResource;
 import dev.rynko.resources.TemplatesResource;
 import dev.rynko.resources.WebhooksResource;
 import dev.rynko.utils.HttpClient;
@@ -41,6 +42,7 @@ public class Rynko {
 
     private final HttpClient httpClient;
     private final DocumentsResource documents;
+    private final FlowResource flow;
     private final TemplatesResource templates;
     private final WebhooksResource webhooks;
 
@@ -75,6 +77,7 @@ public class Rynko {
 
         this.httpClient = new HttpClient(config);
         this.documents = new DocumentsResource(httpClient);
+        this.flow = new FlowResource(httpClient);
         this.templates = new TemplatesResource(httpClient);
         this.webhooks = new WebhooksResource(httpClient);
     }
@@ -86,6 +89,15 @@ public class Rynko {
      */
     public DocumentsResource documents() {
         return documents;
+    }
+
+    /**
+     * Returns the Flow resource for AI output validation operations.
+     *
+     * @return Flow resource
+     */
+    public FlowResource flow() {
+        return flow;
     }
 
     /**

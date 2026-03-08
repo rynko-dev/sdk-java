@@ -302,6 +302,29 @@ public class HttpClient {
     }
 
     /**
+     * Makes a POST request to an absolute URL (not relative to base URL).
+     */
+    public <T> T postAbsolute(String absoluteUrl, Object body, Class<T> responseType) throws RynkoException {
+        try {
+            String jsonBody = objectMapper.writeValueAsString(body);
+            RequestBody requestBody = RequestBody.create(jsonBody, JSON);
+
+            Request request = new Request.Builder()
+                    .url(absoluteUrl)
+                    .post(requestBody)
+                    .addHeader("Authorization", "Bearer " + apiKey)
+                    .addHeader("User-Agent", USER_AGENT)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Accept", "application/json")
+                    .build();
+
+            return executeWithRetry(request, responseType);
+        } catch (IOException e) {
+            throw new RynkoException("Failed to serialize request body", e);
+        }
+    }
+
+    /**
      * Gets the base URL without the /api/v1 suffix (for auth endpoints).
      */
     public String getBaseUrlWithoutVersion() {

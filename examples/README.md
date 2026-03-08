@@ -19,6 +19,8 @@ The examples are located in `src/main/java/dev/rynko/examples/`:
 | [BatchGenerate.java](../src/main/java/dev/rynko/examples/BatchGenerate.java) | Generate multiple documents |
 | [ErrorHandling.java](../src/main/java/dev/rynko/examples/ErrorHandling.java) | Handle API errors gracefully |
 | [WebhookHandler.java](../src/main/java/dev/rynko/examples/WebhookHandler.java) | Spring Boot webhook handler example |
+| [FlowSubmitAndWait.java](../src/main/java/dev/rynko/examples/FlowSubmitAndWait.java) | Submit a Flow run and wait for validation |
+| [FlowApprovalWorkflow.java](../src/main/java/dev/rynko/examples/FlowApprovalWorkflow.java) | List, review, and approve/reject Flow approvals |
 
 ## Running Examples
 
