@@ -14,12 +14,21 @@ import java.util.Set;
 public class FlowRun {
 
     private static final Set<String> TERMINAL_STATUSES = new HashSet<>(Arrays.asList(
-            "completed", "delivered", "approved", "rejected",
+            "validated", "completed", "delivered", "approved", "rejected",
             "validation_failed", "render_failed", "delivery_failed"
     ));
 
     @JsonProperty("id")
     private String id;
+
+    @JsonProperty("runId")
+    private String runId;
+
+    @JsonProperty("shortId")
+    private String shortId;
+
+    @JsonProperty("success")
+    private Boolean success;
 
     @JsonProperty("gateId")
     private String gateId;
@@ -51,8 +60,18 @@ public class FlowRun {
     public FlowRun() {
     }
 
-    public String getId() { return id; }
+    /** Gets the run ID (falls back to runId from submit response). */
+    public String getId() { return id != null ? id : runId; }
     public void setId(String id) { this.id = id; }
+
+    public String getRunId() { return runId; }
+    public void setRunId(String runId) { this.runId = runId; }
+
+    public String getShortId() { return shortId; }
+    public void setShortId(String shortId) { this.shortId = shortId; }
+
+    public Boolean getSuccess() { return success; }
+    public void setSuccess(Boolean success) { this.success = success; }
 
     public String getGateId() { return gateId; }
     public void setGateId(String gateId) { this.gateId = gateId; }
