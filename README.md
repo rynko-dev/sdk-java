@@ -54,7 +54,7 @@ Add to your `pom.xml`:
 <dependency>
     <groupId>dev.rynko</groupId>
     <artifactId>sdk</artifactId>
-    <version>1.3.0</version>
+    <version>1.3.5</version>
 </dependency>
 ```
 
@@ -63,13 +63,13 @@ Add to your `pom.xml`:
 Add to your `build.gradle`:
 
 ```groovy
-implementation 'dev.rynko:sdk:1.3.0'
+implementation 'dev.rynko:sdk:1.3.5'
 ```
 
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("dev.rynko:sdk:1.3.0")
+implementation("dev.rynko:sdk:1.3.5")
 ```
 
 ## Quick Start
@@ -614,6 +614,11 @@ public class WebhookController {
 | `document.failed` | Document generation failed | `jobId`, `templateId`, `errorMessage`, `errorCode`, `metadata` |
 | `document.downloaded` | Document was downloaded | `jobId`, `downloadedAt` |
 | `batch.completed` | Batch generation finished | `batchId`, `templateId`, `format`, `totalJobs`, `completedJobs`, `failedJobs`, `metadata` |
+| `flow.run.completed` | Flow run completed successfully | `runId`, `gateId`, `status`, `output` |
+| `flow.run.approved` | Flow run approved by reviewer | `runId`, `gateId`, `status`, `approvalId` |
+| `flow.run.rejected` | Flow run rejected by reviewer | `runId`, `gateId`, `status`, `reason` |
+| `flow.run.review_required` | Flow run requires human review | `runId`, `gateId`, `status` |
+| `flow.delivery.failed` | Flow delivery failed | `deliveryId`, `runId`, `error`, `attempts` |
 
 #### Webhook Headers
 
@@ -665,19 +670,25 @@ FlowRun run = client.flow().submitRun("gate_abc123",
 );
 
 System.out.println("Run ID: " + run.getId());
-System.out.println("Status: " + run.getStatus());  // "pending"
+System.out.println("Status: " + run.getStatus());    // "validated" or "validation_failed"
+System.out.println("Success: " + run.getSuccess());  // true or false
 
-// Wait for validation result (polls until terminal state)
+// Check immediate validation result
+if (!run.getSuccess()) {
+    System.out.println("Validation failed!");
+}
+
+// For gates with rendering/approval steps, wait for terminal state
 FlowRun result = client.flow().waitForRun(run.getId(), 2000, 120000);
 // pollIntervalMs: 2000 (default: 1000)
 // timeoutMs: 120000 (default: 60000)
 
-if ("approved".equals(result.getStatus())) {
+if ("validated".equals(result.getStatus()) || "approved".equals(result.getStatus())) {
     System.out.println("Validation passed!");
-} else if ("rejected".equals(result.getStatus())) {
-    System.out.println("Validation failed: " + result.getErrors());
 } else if ("validation_failed".equals(result.getStatus())) {
-    System.out.println("Schema validation errors: " + result.getErrors());
+    System.out.println("Validation failed: " + result.getErrors());
+} else if ("rejected".equals(result.getStatus())) {
+    System.out.println("Rejected by reviewer: " + result.getErrors());
 }
 ```
 
@@ -725,7 +736,7 @@ System.out.println("Status: " + run.getStatus());
 
 ### Manage Approvals
 
-When a gate has approval rules, runs may enter a `review_required` state:
+When a gate has approval rules, runs may enter a `pending_approval` state:
 
 ```java
 import dev.rynko.models.FlowApproval;
