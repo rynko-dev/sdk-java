@@ -75,11 +75,10 @@ public class FlowResource {
     public ListResponse<FlowGate> listGates(Integer page, Integer limit, String status) throws RynkoException {
         int effectiveLimit = limit != null ? limit : 20;
         int effectivePage = page != null ? page : 1;
-        int offset = (effectivePage - 1) * effectiveLimit;
 
         Map<String, String> params = new HashMap<>();
         params.put("limit", String.valueOf(effectiveLimit));
-        params.put("offset", String.valueOf(offset));
+        params.put("page", String.valueOf(effectivePage));
         if (status != null) {
             params.put("status", status);
         }
@@ -149,11 +148,10 @@ public class FlowResource {
     public ListResponse<FlowRun> listRuns(Integer page, Integer limit, String status) throws RynkoException {
         int effectiveLimit = limit != null ? limit : 20;
         int effectivePage = page != null ? page : 1;
-        int offset = (effectivePage - 1) * effectiveLimit;
 
         Map<String, String> params = new HashMap<>();
         params.put("limit", String.valueOf(effectiveLimit));
-        params.put("offset", String.valueOf(offset));
+        params.put("page", String.valueOf(effectivePage));
         if (status != null) {
             params.put("status", status);
         }
@@ -189,11 +187,10 @@ public class FlowResource {
     public ListResponse<FlowRun> listRunsByGate(String gateId, Integer page, Integer limit, String status) throws RynkoException {
         int effectiveLimit = limit != null ? limit : 20;
         int effectivePage = page != null ? page : 1;
-        int offset = (effectivePage - 1) * effectiveLimit;
 
         Map<String, String> params = new HashMap<>();
         params.put("limit", String.valueOf(effectiveLimit));
-        params.put("offset", String.valueOf(offset));
+        params.put("page", String.valueOf(effectivePage));
         if (status != null) {
             params.put("status", status);
         }
@@ -226,11 +223,10 @@ public class FlowResource {
     public ListResponse<FlowRun> listActiveRuns(Integer page, Integer limit) throws RynkoException {
         int effectiveLimit = limit != null ? limit : 20;
         int effectivePage = page != null ? page : 1;
-        int offset = (effectivePage - 1) * effectiveLimit;
 
         Map<String, String> params = new HashMap<>();
         params.put("limit", String.valueOf(effectiveLimit));
-        params.put("offset", String.valueOf(offset));
+        params.put("page", String.valueOf(effectivePage));
 
         FlowListResponse<FlowRun> response = httpClient.getAbsolute(
                 flowUrl("/runs/active"), params,
@@ -309,11 +305,10 @@ public class FlowResource {
     public ListResponse<FlowApproval> listApprovals(Integer page, Integer limit, String status) throws RynkoException {
         int effectiveLimit = limit != null ? limit : 20;
         int effectivePage = page != null ? page : 1;
-        int offset = (effectivePage - 1) * effectiveLimit;
 
         Map<String, String> params = new HashMap<>();
         params.put("limit", String.valueOf(effectiveLimit));
-        params.put("offset", String.valueOf(offset));
+        params.put("page", String.valueOf(effectivePage));
         if (status != null) {
             params.put("status", status);
         }
@@ -420,11 +415,10 @@ public class FlowResource {
     public ListResponse<FlowDelivery> listDeliveries(String runId, Integer page, Integer limit) throws RynkoException {
         int effectiveLimit = limit != null ? limit : 20;
         int effectivePage = page != null ? page : 1;
-        int offset = (effectivePage - 1) * effectiveLimit;
 
         Map<String, String> params = new HashMap<>();
         params.put("limit", String.valueOf(effectiveLimit));
-        params.put("offset", String.valueOf(offset));
+        params.put("page", String.valueOf(effectivePage));
 
         FlowListResponse<FlowDelivery> response = httpClient.getAbsolute(
                 flowUrl("/runs/" + runId + "/deliveries"), params,
