@@ -281,6 +281,11 @@ public class WebhooksResource {
      *   <li>{@code document.generated} - A document was successfully generated</li>
      *   <li>{@code document.failed} - A document generation failed</li>
      *   <li>{@code batch.completed} - A batch of documents completed</li>
+     *   <li>{@code flow.run.completed} - A Flow run completed validation</li>
+     *   <li>{@code flow.run.approved} - A Flow run was approved by a reviewer</li>
+     *   <li>{@code flow.run.rejected} - A Flow run was rejected by a reviewer</li>
+     *   <li>{@code flow.run.review_required} - A Flow run requires human review</li>
+     *   <li>{@code flow.delivery.failed} - A Flow delivery failed</li>
      * </ul>
      */
     public static class WebhookEvent {
@@ -332,6 +337,56 @@ public class WebhooksResource {
          */
         public boolean isBatchEvent() {
             return "batch.completed".equals(type);
+        }
+
+        /**
+         * Checks if this is a Flow run event.
+         *
+         * @return true if this is a Flow run event
+         */
+        public boolean isFlowRunEvent() {
+            return type != null && type.startsWith("flow.run.");
+        }
+
+        /**
+         * Checks if this is a Flow delivery event.
+         *
+         * @return true if this is a Flow delivery event
+         */
+        public boolean isFlowDeliveryEvent() {
+            return "flow.delivery.failed".equals(type);
+        }
+
+        /**
+         * Gets the data as a FlowRunWebhookData object.
+         *
+         * <p>Use this for flow.run.* events.</p>
+         *
+         * @return The Flow run webhook data
+         * @throws ClassCastException if the data is not a Map
+         */
+        @SuppressWarnings("unchecked")
+        public FlowRunWebhookData getFlowRunData() {
+            if (data instanceof Map) {
+                return FlowRunWebhookData.fromMap((Map<String, Object>) data);
+            }
+            throw new ClassCastException("Data is not a Flow run webhook payload");
+        }
+
+        /**
+         * Gets the data as a FlowDeliveryWebhookData object.
+         *
+         * <p>Use this for flow.delivery.failed events.</p>
+         *
+         * @return The Flow delivery webhook data
+         * @throws ClassCastException if the data is not a Map
+         */
+        @SuppressWarnings("unchecked")
+        public FlowDeliveryWebhookData getFlowDeliveryData() {
+            if (data instanceof Map) {
+                return FlowDeliveryWebhookData.fromMap((Map<String, Object>) data);
+            }
+            throw new ClassCastException("Data is not a Flow delivery webhook payload");
         }
 
         /**
@@ -496,6 +551,95 @@ public class WebhooksResource {
             Object metadataObj = map.get("metadata");
             if (metadataObj instanceof Map) {
                 data.metadata = (Map<String, Object>) metadataObj;
+            }
+            return data;
+        }
+    }
+
+    /**
+     * Data payload for Flow run webhook events.
+     */
+    public static class FlowRunWebhookData {
+        private String runId;
+        private String gateId;
+        private String gateName;
+        private String status;
+        private Map<String, Object> input;
+        private Map<String, Object> output;
+        private List<Map<String, Object>> errors;
+        private Map<String, Object> metadata;
+
+        public String getRunId() { return runId; }
+        public void setRunId(String runId) { this.runId = runId; }
+        public String getGateId() { return gateId; }
+        public void setGateId(String gateId) { this.gateId = gateId; }
+        public String getGateName() { return gateName; }
+        public void setGateName(String gateName) { this.gateName = gateName; }
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+        public Map<String, Object> getInput() { return input; }
+        public void setInput(Map<String, Object> input) { this.input = input; }
+        public Map<String, Object> getOutput() { return output; }
+        public void setOutput(Map<String, Object> output) { this.output = output; }
+        public List<Map<String, Object>> getErrors() { return errors; }
+        public void setErrors(List<Map<String, Object>> errors) { this.errors = errors; }
+        public Map<String, Object> getMetadata() { return metadata; }
+        public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
+
+        @SuppressWarnings("unchecked")
+        static FlowRunWebhookData fromMap(Map<String, Object> map) {
+            FlowRunWebhookData data = new FlowRunWebhookData();
+            data.runId = (String) map.get("runId");
+            data.gateId = (String) map.get("gateId");
+            data.gateName = (String) map.get("gateName");
+            data.status = (String) map.get("status");
+            Object inputObj = map.get("input");
+            if (inputObj instanceof Map) {
+                data.input = (Map<String, Object>) inputObj;
+            }
+            Object outputObj = map.get("output");
+            if (outputObj instanceof Map) {
+                data.output = (Map<String, Object>) outputObj;
+            }
+            Object errorsObj = map.get("errors");
+            if (errorsObj instanceof List) {
+                data.errors = (List<Map<String, Object>>) errorsObj;
+            }
+            Object metadataObj = map.get("metadata");
+            if (metadataObj instanceof Map) {
+                data.metadata = (Map<String, Object>) metadataObj;
+            }
+            return data;
+        }
+    }
+
+    /**
+     * Data payload for Flow delivery webhook events.
+     */
+    public static class FlowDeliveryWebhookData {
+        private String deliveryId;
+        private String runId;
+        private String error;
+        private int attempts;
+
+        public String getDeliveryId() { return deliveryId; }
+        public void setDeliveryId(String deliveryId) { this.deliveryId = deliveryId; }
+        public String getRunId() { return runId; }
+        public void setRunId(String runId) { this.runId = runId; }
+        public String getError() { return error; }
+        public void setError(String error) { this.error = error; }
+        public int getAttempts() { return attempts; }
+        public void setAttempts(int attempts) { this.attempts = attempts; }
+
+        @SuppressWarnings("unchecked")
+        static FlowDeliveryWebhookData fromMap(Map<String, Object> map) {
+            FlowDeliveryWebhookData data = new FlowDeliveryWebhookData();
+            data.deliveryId = (String) map.get("deliveryId");
+            data.runId = (String) map.get("runId");
+            data.error = (String) map.get("error");
+            Object attemptsObj = map.get("attempts");
+            if (attemptsObj instanceof Number) {
+                data.attempts = ((Number) attemptsObj).intValue();
             }
             return data;
         }
