@@ -379,6 +379,22 @@ public class FlowResource {
         return httpClient.postAbsolute(flowUrl("/approvals/" + approvalId + "/reject"), body, FlowApproval.class);
     }
 
+    /**
+     * Resends approval notification emails for a run.
+     *
+     * <p>Re-sends approval request emails to all pending approvers for a run
+     * that is in {@code review_required} status.</p>
+     *
+     * @param runId The run ID
+     * @return Map with success, sentCount, and totalApprovers
+     * @throws RynkoException if the request fails
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> resendApprovalEmail(String runId) throws RynkoException {
+        Map<String, Object> body = new HashMap<>();
+        return httpClient.postAbsolute(flowUrl("/approvals/resend/" + runId), body, Map.class);
+    }
+
     // ---- Deliveries ----
 
     /**
