@@ -10,7 +10,7 @@ import java.util.Map;
  */
 public class SubmitRunRequest {
 
-    @JsonProperty("input")
+    @JsonProperty("payload")
     private Map<String, Object> input;
 
     @JsonProperty("metadata")
