@@ -281,6 +281,29 @@ public class DocumentsResource {
     }
 
     /**
+     * Retries a failed document generation job.
+     *
+     * @param jobId The job ID to retry
+     * @return The retried generation result
+     * @throws RynkoException if the request fails
+     */
+    public GenerateResult retry(String jobId) throws RynkoException {
+        return httpClient.post("/documents/jobs/" + jobId + "/retry",
+                new java.util.HashMap<String, Object>(), GenerateResult.class);
+    }
+
+    /**
+     * Cancels a queued or processing document generation job.
+     *
+     * @param jobId The job ID to cancel
+     * @throws RynkoException if the request fails
+     */
+    public void cancel(String jobId) throws RynkoException {
+        httpClient.post("/documents/jobs/" + jobId + "/cancel",
+                new java.util.HashMap<String, Object>(), Void.class);
+    }
+
+    /**
      * Deletes a generated document.
      *
      * @param jobId The job ID of the document to delete

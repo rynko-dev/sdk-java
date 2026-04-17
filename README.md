@@ -21,15 +21,25 @@ Official Java SDK for [Rynko](https://rynko.dev) - the document generation and A
 - [Document Jobs](#document-jobs)
   - [Get Job Status](#get-job-status)
   - [List Jobs](#list-jobs)
+  - [Retry and Cancel Jobs](#retry-and-cancel-jobs)
 - [Templates](#templates)
   - [List Templates](#list-templates)
   - [Get Template Details](#get-template-details)
 - [Webhooks](#webhooks)
   - [List Webhooks](#list-webhooks)
+  - [Webhook CRUD](#webhook-crud)
+  - [Webhook Deliveries](#webhook-deliveries)
   - [Verify Webhook Signatures](#verify-webhook-signatures)
+- [Rynko Extract](#rynko-extract)
+  - [Create Extraction Job](#create-extraction-job)
+  - [Manage Configs](#manage-configs)
+  - [Flow Integration](#flow-integration)
 - [Rynko Flow](#rynko-flow)
   - [Submit and Wait for Run](#submit-and-wait-for-run)
   - [List Gates](#list-gates)
+  - [Gate Management](#gate-management)
+  - [Test and Validate Gates](#test-and-validate-gates)
+  - [Run Payload and Chains](#run-payload-and-chains)
   - [Manage Approvals](#manage-approvals)
   - [Monitor Deliveries](#monitor-deliveries)
 - [Configuration](#configuration)
@@ -54,7 +64,7 @@ Add to your `pom.xml`:
 <dependency>
     <groupId>dev.rynko</groupId>
     <artifactId>sdk</artifactId>
-    <version>1.3.5</version>
+    <version>1.4.0</version>
 </dependency>
 ```
 
@@ -63,13 +73,13 @@ Add to your `pom.xml`:
 Add to your `build.gradle`:
 
 ```groovy
-implementation 'dev.rynko:sdk:1.3.5'
+implementation 'dev.rynko:sdk:1.4.0'
 ```
 
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("dev.rynko:sdk:1.3.5")
+implementation("dev.rynko:sdk:1.4.0")
 ```
 
 ## Quick Start
@@ -121,7 +131,9 @@ public class Example {
 - **Environment support** - Generate documents in specific environments
 - **Webhook verification** - Secure HMAC signature verification for incoming webhooks
 - **Polling utility** - Built-in `waitForCompletion()` method with configurable timeout
-- **Rynko Flow** - Submit runs for validation, manage approvals, and monitor deliveries
+- **Rynko Extract** - AI-powered data extraction from documents
+- **Rynko Flow** - Submit runs for validation, manage gates, approvals, and deliveries
+- **Webhook CRUD** - Full webhook subscription management with delivery tracking
 
 ## Authentication
 
@@ -358,6 +370,17 @@ ListResponse<GenerateResult> filteredJobs = client.documents().list(
 );
 ```
 
+### Retry and Cancel Jobs
+
+```java
+// Retry a failed document generation job
+GenerateResult retried = client.documents().retry("job_abc123");
+System.out.println("Retried job status: " + retried.getStatus());
+
+// Cancel a queued or processing job
+client.documents().cancel("job_abc123");
+```
+
 ## Templates
 
 ### List Templates
@@ -416,7 +439,7 @@ if (template.getVariables() != null) {
 
 ## Webhooks
 
-Webhook subscriptions are managed through the [Rynko Dashboard](https://app.rynko.dev). The SDK provides read-only access to view webhooks and utilities for signature verification.
+The SDK provides full webhook management including creating, updating, and deleting subscriptions, plus signature verification for incoming webhooks.
 
 ### List Webhooks
 
@@ -443,6 +466,66 @@ System.out.println("URL: " + webhook.getUrl());
 System.out.println("Events: " + Arrays.toString(webhook.getEvents()));
 System.out.println("Active: " + webhook.isActive());
 System.out.println("Description: " + webhook.getDescription());
+```
+
+### Webhook CRUD
+
+```java
+import dev.rynko.models.CreateWebhookRequest;
+import dev.rynko.models.UpdateWebhookRequest;
+
+// Create a webhook subscription
+WebhookSubscription webhook = client.webhooks().create(
+    CreateWebhookRequest.builder()
+        .url("https://your-app.com/webhooks/rynko")
+        .event("document.generated")
+        .event("document.failed")
+        .event("batch.completed")
+        .description("Production webhook")
+        .workspaceId("ws_abc123")  // Optional
+        .build()
+);
+System.out.println("Webhook ID: " + webhook.getId());
+System.out.println("Secret: " + webhook.getSecret());
+
+// Update a webhook
+WebhookSubscription updated = client.webhooks().update(webhook.getId(),
+    UpdateWebhookRequest.builder()
+        .description("Updated production webhook")
+        .isActive(true)
+        .build()
+);
+
+// Rotate the signing secret
+WebhookSubscription rotated = client.webhooks().rotateSecret(webhook.getId());
+System.out.println("New secret: " + rotated.getSecret());
+
+// Send a test event
+client.webhooks().test(webhook.getId());
+
+// Delete a webhook
+client.webhooks().delete(webhook.getId());
+```
+
+### Webhook Deliveries
+
+```java
+import dev.rynko.models.WebhookDelivery;
+
+// List deliveries for a webhook
+ListResponse<WebhookDelivery> deliveries = client.webhooks().listDeliveries("wh_abc123");
+
+for (WebhookDelivery delivery : deliveries.getData()) {
+    System.out.println(delivery.getId() + ": " + delivery.getStatus()
+        + " (HTTP " + delivery.getHttpStatus() + ")");
+}
+
+// List with pagination
+ListResponse<WebhookDelivery> page = client.webhooks().listDeliveries("wh_abc123", 10, 0);
+
+// Retry a failed delivery
+WebhookDelivery retried = client.webhooks().retryDelivery("wh_abc123", "del_xyz789");
+System.out.println("Retry status: " + retried.getStatus());
 ```
 
 ### Verify Webhook Signatures
@@ -648,6 +731,125 @@ try {
 WebhookEvent event = client.webhooks().constructEvent(payload);
 ```
 
+## Rynko Extract
+
+[Rynko Extract](https://rynko.dev/extract) provides AI-powered data extraction from documents.
+
+### Create Extraction Job
+
+```java
+import dev.rynko.models.ExtractJobRequest;
+import dev.rynko.models.ExtractJob;
+
+import java.io.File;
+import java.util.Map;
+
+// Extract data from a document with a schema
+ExtractJob job = client.extract().createJob(
+    ExtractJobRequest.builder()
+        .file(new File("invoice.pdf"))
+        .schema(Map.of(
+            "invoiceNumber", Map.of("type", "string"),
+            "total", Map.of("type", "number"),
+            "lineItems", Map.of("type", "array")
+        ))
+        .instructions("Extract invoice details")
+        .build()
+);
+
+System.out.println("Job ID: " + job.getId());
+System.out.println("Status: " + job.getStatus());
+
+// Get job result
+ExtractJob result = client.extract().getJob(job.getId());
+if (result.isTerminal()) {
+    System.out.println("Result: " + result.getResult());
+}
+
+// List extraction jobs
+ListResponse<ExtractJob> jobs = client.extract().listJobs(1, 20, "completed");
+
+// Cancel a job
+client.extract().cancelJob("job_abc123");
+
+// Get usage statistics
+ExtractUsage usage = client.extract().getUsage();
+System.out.println("Used: " + usage.getUsed() + "/" + usage.getLimit());
+```
+
+### Discover Schema
+
+```java
+import dev.rynko.models.DiscoverRequest;
+
+// Discover schema from sample files
+ExtractJob discovered = client.extract().discover(
+    DiscoverRequest.builder()
+        .file(new File("sample-invoice.pdf"))
+        .instructions("Identify all fields in this invoice")
+        .build()
+);
+
+System.out.println("Discovered schema: " + discovered.getSchema());
+```
+
+### Manage Configs
+
+```java
+import dev.rynko.models.CreateConfigRequest;
+import dev.rynko.models.UpdateConfigRequest;
+import dev.rynko.models.ExtractConfig;
+
+// Create a config
+ExtractConfig config = client.extract().createConfig(
+    CreateConfigRequest.builder()
+        .name("Invoice Extractor")
+        .description("Extracts data from invoices")
+        .schema(schema)
+        .instructions("Extract all invoice fields")
+        .build()
+);
+
+// Update a config
+ExtractConfig updated = client.extract().updateConfig(config.getId(),
+    UpdateConfigRequest.builder()
+        .description("Updated description")
+        .build()
+);
+
+// Publish a config
+client.extract().publishConfig(config.getId());
+
+// List configs
+ListResponse<ExtractConfig> configs = client.extract().listConfigs();
+
+// Get config versions
+ListResponse<ExtractConfig> versions = client.extract().getConfigVersions(config.getId());
+
+// Restore a version
+client.extract().restoreConfigVersion(config.getId(), "version_abc123");
+
+// Run a config against files
+ExtractJob result = client.extract().runConfig(config.getId(),
+    Arrays.asList(new File("invoice1.pdf"), new File("invoice2.pdf")));
+
+// Delete a config
+client.extract().deleteConfig(config.getId());
+```
+
+### Flow Integration
+
+```java
+// Extract data using a Flow gate
+ExtractJob extracted = client.extract().extractWithGate("gate_abc123",
+    Arrays.asList(new File("document.pdf")));
+
+// Submit files to a Flow gate pipeline
+FlowRun run = client.extract().submitFileRun("gate_abc123",
+    Arrays.asList(new File("document.pdf")));
+System.out.println("Run ID: " + run.getId());
+```
+
 ## Rynko Flow
 
 [Rynko Flow](https://rynko.dev/flow) is an AI output validation gateway. Define gates with schemas and business rules, submit data for validation, handle human-in-the-loop approvals, and track webhook deliveries.
@@ -708,6 +910,96 @@ for (FlowGate gate : gates.getData()) {
 // Get a specific gate
 FlowGate gate = client.flow().getGate("gate_abc123");
 System.out.println("Gate: " + gate.getName());
+```
+
+### Gate Management
+
+```java
+import dev.rynko.models.CreateGateRequest;
+import dev.rynko.models.UpdateGateRequest;
+
+// Create a gate
+FlowGate gate = client.flow().createGate(
+    CreateGateRequest.builder()
+        .name("Order Validator")
+        .description("Validates order data")
+        .workspaceId("ws_abc123")
+        .schema(orderSchema)
+        .rules(validationRules)
+        .build()
+);
+
+// Update a gate
+FlowGate updated = client.flow().updateGate(gate.getId(),
+    UpdateGateRequest.builder()
+        .description("Updated order validator")
+        .build()
+);
+
+// Update gate schema
+client.flow().updateGateSchema(gate.getId(), newSchema);
+
+// Publish a gate
+client.flow().publishGate(gate.getId());
+
+// Rollback a gate
+client.flow().rollbackGate(gate.getId());
+client.flow().rollbackGate(gate.getId(), "version_abc123");  // To specific version
+
+// Export and import gates
+Map<String, Object> exported = client.flow().exportGate(gate.getId());
+FlowGate imported = client.flow().importGate(exported);
+
+// Delete a gate
+client.flow().deleteGate(gate.getId());
+```
+
+### Test and Validate Gates
+
+```java
+import dev.rynko.models.TestGateResult;
+import dev.rynko.models.ValidateGateRequest;
+
+// Test a gate (dry-run, no run created)
+TestGateResult testResult = client.flow().testGate("gate_abc123",
+    Map.of("name", "John Doe", "amount", 150.00));
+
+System.out.println("Valid: " + testResult.isValid());
+if (!testResult.isValid()) {
+    System.out.println("Errors: " + testResult.getErrors());
+}
+
+// Validate a gate (creates a run + validation_id)
+FlowRun validated = client.flow().validateGate("gate_abc123",
+    ValidateGateRequest.builder()
+        .payloadField("name", "John Doe")
+        .payloadField("amount", 150.00)
+        .webhookUrl("https://your-app.com/webhooks/flow")
+        .build()
+);
+
+// Verify a validation
+Map<String, Object> verification = client.flow().verifyValidation(
+    "validation_abc123", Map.of("confirmed", true));
+```
+
+### Run Payload and Chains
+
+```java
+// Get the full payload for a run
+Map<String, Object> payload = client.flow().getRunPayload("run_abc123");
+
+// Get a specific field from the payload
+Map<String, Object> field = client.flow().getRunPayload("run_abc123", "customerName");
+
+// Get all runs in a correlation chain
+ListResponse<FlowRun> chain = client.flow().getRunChain("correlation_abc123");
+for (FlowRun r : chain.getData()) {
+    System.out.println(r.getId() + ": " + r.getStatus());
+}
+
+// Get a transaction
+Map<String, Object> transaction = client.flow().getTransaction("txn_abc123");
 ```
 
 ### List and Filter Runs
@@ -1018,6 +1310,7 @@ public class InvoiceController {
 | `me()` | `User` | Get current authenticated user |
 | `verifyApiKey()` | `boolean` | Verify API key is valid |
 | `documents()` | `DocumentsResource` | Access document generation operations |
+| `extract()` | `ExtractResource` | Access data extraction operations |
 | `templates()` | `TemplatesResource` | Access template operations |
 | `webhooks()` | `WebhooksResource` | Access webhook operations |
 | `flow()` | `FlowResource` | Access Flow operations |
@@ -1034,6 +1327,8 @@ public class InvoiceController {
 | `list(page, limit, templateId, workspaceId, status)` | `ListResponse<GenerateResult>` | List with all filters |
 | `waitForCompletion(jobId)` | `GenerateResult` | Poll until job completes (default timeout) |
 | `waitForCompletion(jobId, pollIntervalMs, timeoutMs)` | `GenerateResult` | Poll with custom settings |
+| `retry(jobId)` | `GenerateResult` | Retry a failed job |
+| `cancel(jobId)` | `void` | Cancel a queued/processing job |
 | `delete(jobId)` | `void` | Delete a generated document |
 | `download(url)` | `byte[]` | Download document as bytes |
 
@@ -1050,6 +1345,30 @@ public class InvoiceController {
 | `listExcel(page, limit)` | `ListResponse<Template>` | List Excel templates with pagination |
 | `get(templateId)` | `Template` | Get template by ID (UUID, shortId, or slug) |
 
+### ExtractResource
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `createJob(request)` | `ExtractJob` | Create an extraction job (multipart) |
+| `getJob(jobId)` | `ExtractJob` | Get extraction job by ID |
+| `listJobs()` | `ListResponse<ExtractJob>` | List extraction jobs |
+| `listJobs(page, limit, status)` | `ListResponse<ExtractJob>` | List with filters |
+| `cancelJob(jobId)` | `void` | Cancel an extraction job |
+| `getUsage()` | `ExtractUsage` | Get extraction usage stats |
+| `discover(request)` | `ExtractJob` | Discover schema from sample files |
+| `createConfig(request)` | `ExtractConfig` | Create extraction config |
+| `getConfig(configId)` | `ExtractConfig` | Get config by ID |
+| `listConfigs()` | `ListResponse<ExtractConfig>` | List extraction configs |
+| `listConfigs(page, limit, status)` | `ListResponse<ExtractConfig>` | List with filters |
+| `updateConfig(configId, request)` | `ExtractConfig` | Update a config |
+| `deleteConfig(configId)` | `void` | Delete a config |
+| `publishConfig(configId)` | `ExtractConfig` | Publish a config |
+| `getConfigVersions(configId)` | `ListResponse<ExtractConfig>` | Get config version history |
+| `restoreConfigVersion(configId, versionId)` | `ExtractConfig` | Restore a config version |
+| `runConfig(configId, files)` | `ExtractJob` | Run config against files |
+| `extractWithGate(gateId, files)` | `ExtractJob` | Extract using a Flow gate |
+| `submitFileRun(gateId, files)` | `FlowRun` | Submit files to a Flow gate pipeline |
+
 ### WebhooksResource
 
 | Method | Returns | Description |
@@ -1057,6 +1376,14 @@ public class InvoiceController {
 | `list()` | `ListResponse<WebhookSubscription>` | List webhook subscriptions |
 | `list(page, limit)` | `ListResponse<WebhookSubscription>` | List with pagination |
 | `get(webhookId)` | `WebhookSubscription` | Get webhook by ID |
+| `create(request)` | `WebhookSubscription` | Create a webhook subscription |
+| `update(webhookId, request)` | `WebhookSubscription` | Update a webhook subscription |
+| `delete(webhookId)` | `void` | Delete a webhook subscription |
+| `rotateSecret(webhookId)` | `WebhookSubscription` | Rotate signing secret |
+| `test(webhookId)` | `void` | Send a test event |
+| `listDeliveries(webhookId)` | `ListResponse<WebhookDelivery>` | List webhook deliveries |
+| `listDeliveries(webhookId, limit, offset)` | `ListResponse<WebhookDelivery>` | List with pagination |
+| `retryDelivery(webhookId, deliveryId)` | `WebhookDelivery` | Retry a failed delivery |
 | `verifySignature(payload, signature, timestamp, secret)` | `void` | Verify webhook signature (throws on failure) |
 | `constructEvent(payload)` | `WebhookEvent` | Parse webhook event from payload |
 | `constructEvent(payload, signature, timestamp, secret)` | `WebhookEvent` | Verify and parse webhook event |
@@ -1068,6 +1395,18 @@ public class InvoiceController {
 | `listGates()` | `ListResponse<FlowGate>` | List all gates |
 | `listGates(page, limit, status)` | `ListResponse<FlowGate>` | List gates with filters |
 | `getGate(gateId)` | `FlowGate` | Get gate by ID |
+| `createGate(request)` | `FlowGate` | Create a new gate |
+| `updateGate(gateId, request)` | `FlowGate` | Update a gate |
+| `deleteGate(gateId)` | `void` | Delete a gate |
+| `updateGateSchema(gateId, schema)` | `FlowGate` | Update gate schema |
+| `publishGate(gateId)` | `FlowGate` | Publish a gate |
+| `rollbackGate(gateId)` | `FlowGate` | Rollback to previous version |
+| `rollbackGate(gateId, versionId)` | `FlowGate` | Rollback to specific version |
+| `exportGate(gateId)` | `Map<String, Object>` | Export gate configuration |
+| `importGate(data)` | `FlowGate` | Import gate configuration |
+| `testGate(gateId, payload)` | `TestGateResult` | Dry-run test (no run created) |
+| `validateGate(gateId, request)` | `FlowRun` | Validate and create run |
+| `verifyValidation(validationId, payload)` | `Map<String, Object>` | Verify a validation |
 | `submitRun(gateId, request)` | `FlowRun` | Submit a run for validation |
 | `getRun(runId)` | `FlowRun` | Get run by ID |
 | `listRuns()` | `ListResponse<FlowRun>` | List all runs |
@@ -1086,7 +1425,12 @@ public class InvoiceController {
 | `reject(approvalId, reason)` | `FlowApproval` | Reject with a reason |
 | `listDeliveries(runId)` | `ListResponse<FlowDelivery>` | List deliveries for a run |
 | `listDeliveries(runId, page, limit)` | `ListResponse<FlowDelivery>` | List deliveries with pagination |
+| `resendApprovalEmail(runId)` | `Map<String, Object>` | Resend approval emails |
 | `retryDelivery(deliveryId)` | `FlowDelivery` | Retry a failed delivery |
+| `getRunPayload(runId)` | `Map<String, Object>` | Get run payload |
+| `getRunPayload(runId, field)` | `Map<String, Object>` | Get specific field from payload |
+| `getRunChain(correlationId)` | `ListResponse<FlowRun>` | Get runs in correlation chain |
+| `getTransaction(transactionId)` | `Map<String, Object>` | Get transaction by ID |
 
 ## Examples
 

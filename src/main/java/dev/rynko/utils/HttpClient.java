@@ -10,7 +10,9 @@ import dev.rynko.exceptions.RynkoException;
 import dev.rynko.models.ApiError;
 import okhttp3.*;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 public class HttpClient {
 
     private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
-    private static final String USER_AGENT = "rynko-java/1.0.0";
+    private static final String USER_AGENT = "rynko-java/1.4.0";
 
     private final OkHttpClient client;
     private final ObjectMapper objectMapper;
@@ -322,6 +324,213 @@ public class HttpClient {
         } catch (IOException e) {
             throw new RynkoException("Failed to serialize request body", e);
         }
+    }
+
+    /**
+     * Makes a POST request to an absolute URL with no response body.
+     */
+    public void postAbsoluteVoid(String absoluteUrl, Object body) throws RynkoException {
+        try {
+            String jsonBody = objectMapper.writeValueAsString(body);
+            RequestBody requestBody = RequestBody.create(jsonBody, JSON);
+
+            Request request = new Request.Builder()
+                    .url(absoluteUrl)
+                    .post(requestBody)
+                    .addHeader("Authorization", "Bearer " + apiKey)
+                    .addHeader("User-Agent", USER_AGENT)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Accept", "application/json")
+                    .build();
+
+            executeVoidWithRetry(request);
+        } catch (IOException e) {
+            throw new RynkoException("Failed to serialize request body", e);
+        }
+    }
+
+    /**
+     * Makes a PUT request to an absolute URL.
+     */
+    public <T> T putAbsolute(String absoluteUrl, Object body, Class<T> responseType) throws RynkoException {
+        try {
+            String jsonBody = objectMapper.writeValueAsString(body);
+            RequestBody requestBody = RequestBody.create(jsonBody, JSON);
+
+            Request request = new Request.Builder()
+                    .url(absoluteUrl)
+                    .put(requestBody)
+                    .addHeader("Authorization", "Bearer " + apiKey)
+                    .addHeader("User-Agent", USER_AGENT)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Accept", "application/json")
+                    .build();
+
+            return executeWithRetry(request, responseType);
+        } catch (IOException e) {
+            throw new RynkoException("Failed to serialize request body", e);
+        }
+    }
+
+    /**
+     * Makes a PATCH request to an absolute URL.
+     */
+    public <T> T patchAbsolute(String absoluteUrl, Object body, Class<T> responseType) throws RynkoException {
+        try {
+            String jsonBody = objectMapper.writeValueAsString(body);
+            RequestBody requestBody = RequestBody.create(jsonBody, JSON);
+
+            Request request = new Request.Builder()
+                    .url(absoluteUrl)
+                    .patch(requestBody)
+                    .addHeader("Authorization", "Bearer " + apiKey)
+                    .addHeader("User-Agent", USER_AGENT)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Accept", "application/json")
+                    .build();
+
+            return executeWithRetry(request, responseType);
+        } catch (IOException e) {
+            throw new RynkoException("Failed to serialize request body", e);
+        }
+    }
+
+    /**
+     * Makes a DELETE request to an absolute URL.
+     */
+    public void deleteAbsolute(String absoluteUrl) throws RynkoException {
+        Request request = new Request.Builder()
+                .url(absoluteUrl)
+                .delete()
+                .addHeader("Authorization", "Bearer " + apiKey)
+                .addHeader("User-Agent", USER_AGENT)
+                .build();
+
+        executeVoidWithRetry(request);
+    }
+
+    /**
+     * Makes a GET request to an absolute URL returning a specific class.
+     */
+    public <T> T getAbsolute(String absoluteUrl, Map<String, String> queryParams, Class<T> responseType) throws RynkoException {
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(absoluteUrl).newBuilder();
+        if (queryParams != null) {
+            for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+                if (entry.getValue() != null) {
+                    urlBuilder.addQueryParameter(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        Request request = new Request.Builder()
+                .url(urlBuilder.build())
+                .get()
+                .addHeader("Authorization", "Bearer " + apiKey)
+                .addHeader("User-Agent", USER_AGENT)
+                .addHeader("Accept", "application/json")
+                .build();
+
+        return executeWithRetry(request, responseType);
+    }
+
+    /**
+     * Makes a POST request with multipart form data.
+     *
+     * @param url         The absolute URL
+     * @param files       List of files to upload
+     * @param formFields  Additional form fields (key-value pairs)
+     * @param responseType The response class
+     * @return The deserialized response
+     * @throws RynkoException if the request fails
+     */
+    public <T> T postMultipart(String url, List<File> files, Map<String, String> formFields,
+                                Class<T> responseType) throws RynkoException {
+        MultipartBody.Builder bodyBuilder = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM);
+
+        if (files != null) {
+            for (File file : files) {
+                String contentType = guessContentType(file.getName());
+                bodyBuilder.addFormDataPart("files", file.getName(),
+                        RequestBody.create(file, MediaType.parse(contentType)));
+            }
+        }
+
+        if (formFields != null) {
+            for (Map.Entry<String, String> entry : formFields.entrySet()) {
+                if (entry.getValue() != null) {
+                    bodyBuilder.addFormDataPart(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        Request request = new Request.Builder()
+                .url(url)
+                .post(bodyBuilder.build())
+                .addHeader("Authorization", "Bearer " + apiKey)
+                .addHeader("User-Agent", USER_AGENT)
+                .addHeader("Accept", "application/json")
+                .build();
+
+        return executeWithRetry(request, responseType);
+    }
+
+    /**
+     * Makes a POST request with multipart form data including a JSON body part.
+     *
+     * @param url          The absolute URL
+     * @param files        List of files to upload
+     * @param jsonBody     Object to serialize as JSON and include as a form field
+     * @param jsonFieldName The form field name for the JSON body
+     * @param responseType The response class
+     * @return The deserialized response
+     * @throws RynkoException if the request fails
+     */
+    public <T> T postMultipartWithJson(String url, List<File> files, Object jsonBody,
+                                        String jsonFieldName, Class<T> responseType) throws RynkoException {
+        try {
+            MultipartBody.Builder bodyBuilder = new MultipartBody.Builder()
+                    .setType(MultipartBody.FORM);
+
+            if (files != null) {
+                for (File file : files) {
+                    String contentType = guessContentType(file.getName());
+                    bodyBuilder.addFormDataPart("files", file.getName(),
+                            RequestBody.create(file, MediaType.parse(contentType)));
+                }
+            }
+
+            if (jsonBody != null) {
+                String json = objectMapper.writeValueAsString(jsonBody);
+                bodyBuilder.addFormDataPart(jsonFieldName, json);
+            }
+
+            Request request = new Request.Builder()
+                    .url(url)
+                    .post(bodyBuilder.build())
+                    .addHeader("Authorization", "Bearer " + apiKey)
+                    .addHeader("User-Agent", USER_AGENT)
+                    .addHeader("Accept", "application/json")
+                    .build();
+
+            return executeWithRetry(request, responseType);
+        } catch (IOException e) {
+            throw new RynkoException("Failed to serialize request body", e);
+        }
+    }
+
+    private String guessContentType(String filename) {
+        String lower = filename.toLowerCase();
+        if (lower.endsWith(".pdf")) return "application/pdf";
+        if (lower.endsWith(".png")) return "image/png";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        if (lower.endsWith(".csv")) return "text/csv";
+        if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        if (lower.endsWith(".xls")) return "application/vnd.ms-excel";
+        if (lower.endsWith(".json")) return "application/json";
+        if (lower.endsWith(".xml")) return "application/xml";
+        if (lower.endsWith(".txt")) return "text/plain";
+        return "application/octet-stream";
     }
 
     /**

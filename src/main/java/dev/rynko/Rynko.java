@@ -3,6 +3,7 @@ package dev.rynko;
 import dev.rynko.exceptions.RynkoException;
 import dev.rynko.models.User;
 import dev.rynko.resources.DocumentsResource;
+import dev.rynko.resources.ExtractResource;
 import dev.rynko.resources.FlowResource;
 import dev.rynko.resources.TemplatesResource;
 import dev.rynko.resources.WebhooksResource;
@@ -42,6 +43,7 @@ public class Rynko {
 
     private final HttpClient httpClient;
     private final DocumentsResource documents;
+    private final ExtractResource extract;
     private final FlowResource flow;
     private final TemplatesResource templates;
     private final WebhooksResource webhooks;
@@ -77,6 +79,7 @@ public class Rynko {
 
         this.httpClient = new HttpClient(config);
         this.documents = new DocumentsResource(httpClient);
+        this.extract = new ExtractResource(httpClient);
         this.flow = new FlowResource(httpClient);
         this.templates = new TemplatesResource(httpClient);
         this.webhooks = new WebhooksResource(httpClient);
@@ -89,6 +92,15 @@ public class Rynko {
      */
     public DocumentsResource documents() {
         return documents;
+    }
+
+    /**
+     * Returns the Extract resource for data extraction operations.
+     *
+     * @return Extract resource
+     */
+    public ExtractResource extract() {
+        return extract;
     }
 
     /**

@@ -4,8 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import dev.rynko.exceptions.RynkoException;
 import dev.rynko.exceptions.WebhookSignatureException;
+import dev.rynko.models.CreateWebhookRequest;
 import dev.rynko.models.ListResponse;
 import dev.rynko.models.PaginationMeta;
+import dev.rynko.models.UpdateWebhookRequest;
+import dev.rynko.models.WebhookDelivery;
 import dev.rynko.utils.HttpClient;
 
 import javax.crypto.Mac;
@@ -119,6 +122,137 @@ public class WebhooksResource {
      */
     public WebhookSubscription get(String webhookId) throws RynkoException {
         return httpClient.get("/webhook-subscriptions/" + webhookId, WebhookSubscription.class);
+    }
+
+    /**
+     * Creates a webhook subscription.
+     *
+     * @param request The create webhook request
+     * @return The created webhook subscription
+     * @throws RynkoException if the request fails
+     */
+    public WebhookSubscription create(CreateWebhookRequest request) throws RynkoException {
+        return httpClient.post("/webhook-subscriptions", request, WebhookSubscription.class);
+    }
+
+    /**
+     * Updates a webhook subscription.
+     *
+     * @param webhookId The webhook subscription ID
+     * @param request   The update request
+     * @return The updated webhook subscription
+     * @throws RynkoException if the request fails
+     */
+    public WebhookSubscription update(String webhookId, UpdateWebhookRequest request) throws RynkoException {
+        return httpClient.patch("/webhook-subscriptions/" + webhookId, request, WebhookSubscription.class);
+    }
+
+    /**
+     * Deletes a webhook subscription.
+     *
+     * @param webhookId The webhook subscription ID
+     * @throws RynkoException if the request fails
+     */
+    public void delete(String webhookId) throws RynkoException {
+        httpClient.delete("/webhook-subscriptions/" + webhookId);
+    }
+
+    /**
+     * Rotates the signing secret for a webhook subscription.
+     *
+     * @param webhookId The webhook subscription ID
+     * @return The updated webhook subscription with new secret
+     * @throws RynkoException if the request fails
+     */
+    public WebhookSubscription rotateSecret(String webhookId) throws RynkoException {
+        return httpClient.post("/webhook-subscriptions/" + webhookId + "/rotate-secret",
+                new HashMap<>(), WebhookSubscription.class);
+    }
+
+    /**
+     * Sends a test event to a webhook subscription.
+     *
+     * @param webhookId The webhook subscription ID
+     * @throws RynkoException if the request fails
+     */
+    public void test(String webhookId) throws RynkoException {
+        httpClient.post("/webhook-subscriptions/" + webhookId + "/test",
+                new HashMap<>(), Void.class);
+    }
+
+    /**
+     * Lists deliveries for a webhook subscription.
+     *
+     * @param webhookId The webhook subscription ID
+     * @return Paginated list of deliveries
+     * @throws RynkoException if the request fails
+     */
+    public ListResponse<WebhookDelivery> listDeliveries(String webhookId) throws RynkoException {
+        return listDeliveries(webhookId, null, null);
+    }
+
+    /**
+     * Lists deliveries for a webhook subscription with pagination.
+     *
+     * @param webhookId The webhook subscription ID
+     * @param limit     Number of items per page
+     * @param offset    Offset for pagination
+     * @return Paginated list of deliveries
+     * @throws RynkoException if the request fails
+     */
+    public ListResponse<WebhookDelivery> listDeliveries(String webhookId, Integer limit, Integer offset) throws RynkoException {
+        int effectiveLimit = limit != null ? limit : 20;
+        int effectiveOffset = offset != null ? offset : 0;
+
+        Map<String, String> params = new HashMap<>();
+        params.put("limit", String.valueOf(effectiveLimit));
+        params.put("offset", String.valueOf(effectiveOffset));
+
+        DeliveriesListResponse response = httpClient.get(
+                "/webhook-subscriptions/" + webhookId + "/deliveries", params,
+                new TypeReference<DeliveriesListResponse>() {});
+
+        ListResponse<WebhookDelivery> result = new ListResponse<>();
+        result.setData(response.getData());
+
+        PaginationMeta meta = new PaginationMeta();
+        meta.setTotal(response.getTotal());
+        meta.setPage(effectiveOffset / effectiveLimit + 1);
+        meta.setLimit(effectiveLimit);
+        meta.setTotalPages(effectiveLimit > 0 ? (response.getTotal() + effectiveLimit - 1) / effectiveLimit : 1);
+        result.setMeta(meta);
+
+        return result;
+    }
+
+    /**
+     * Retries a failed webhook delivery.
+     *
+     * @param webhookId  The webhook subscription ID
+     * @param deliveryId The delivery ID
+     * @return The retried delivery
+     * @throws RynkoException if the request fails
+     */
+    public WebhookDelivery retryDelivery(String webhookId, String deliveryId) throws RynkoException {
+        return httpClient.post(
+                "/webhook-subscriptions/" + webhookId + "/deliveries/" + deliveryId + "/retry",
+                new HashMap<>(), WebhookDelivery.class);
+    }
+
+    /**
+     * Internal class to parse deliveries list response.
+     */
+    private static class DeliveriesListResponse {
+        @JsonProperty("data")
+        private List<WebhookDelivery> data;
+
+        @JsonProperty("total")
+        private int total;
+
+        public List<WebhookDelivery> getData() { return data; }
+        public void setData(List<WebhookDelivery> data) { this.data = data; }
+        public int getTotal() { return total; }
+        public void setTotal(int total) { this.total = total; }
     }
 
     /**

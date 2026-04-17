@@ -3,6 +3,7 @@ package dev.rynko.resources;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import dev.rynko.exceptions.RynkoException;
+import dev.rynko.models.CreateGateRequest;
 import dev.rynko.models.FlowApproval;
 import dev.rynko.models.FlowDelivery;
 import dev.rynko.models.FlowGate;
@@ -10,6 +11,9 @@ import dev.rynko.models.FlowRun;
 import dev.rynko.models.ListResponse;
 import dev.rynko.models.PaginationMeta;
 import dev.rynko.models.SubmitRunRequest;
+import dev.rynko.models.TestGateResult;
+import dev.rynko.models.UpdateGateRequest;
+import dev.rynko.models.ValidateGateRequest;
 import dev.rynko.utils.HttpClient;
 
 import java.util.HashMap;
@@ -51,7 +55,7 @@ public class FlowResource {
         return httpClient.getBaseUrlWithoutVersion() + "/api/flow" + path;
     }
 
-    // ---- Gates (read-only) ----
+    // ---- Gates ----
 
     /**
      * Lists all gates.
@@ -99,6 +103,157 @@ public class FlowResource {
      */
     public FlowGate getGate(String gateId) throws RynkoException {
         return httpClient.getAbsolute(flowUrl("/gates/" + gateId), FlowGate.class);
+    }
+
+    /**
+     * Creates a new gate.
+     *
+     * @param request The create gate request
+     * @return The created gate
+     * @throws RynkoException if the request fails
+     */
+    public FlowGate createGate(CreateGateRequest request) throws RynkoException {
+        return httpClient.postAbsolute(flowUrl("/gates"), request, FlowGate.class);
+    }
+
+    /**
+     * Updates a gate.
+     *
+     * @param gateId  The gate ID
+     * @param request The update gate request
+     * @return The updated gate
+     * @throws RynkoException if the request fails
+     */
+    public FlowGate updateGate(String gateId, UpdateGateRequest request) throws RynkoException {
+        return httpClient.putAbsolute(flowUrl("/gates/" + gateId), request, FlowGate.class);
+    }
+
+    /**
+     * Deletes a gate.
+     *
+     * @param gateId The gate ID
+     * @throws RynkoException if the request fails
+     */
+    public void deleteGate(String gateId) throws RynkoException {
+        httpClient.deleteAbsolute(flowUrl("/gates/" + gateId));
+    }
+
+    /**
+     * Updates the schema for a gate.
+     *
+     * @param gateId The gate ID
+     * @param schema The new schema
+     * @return The updated gate
+     * @throws RynkoException if the request fails
+     */
+    public FlowGate updateGateSchema(String gateId, Object schema) throws RynkoException {
+        return httpClient.putAbsolute(flowUrl("/gates/" + gateId + "/schema"), schema, FlowGate.class);
+    }
+
+    /**
+     * Publishes a gate (makes draft version active).
+     *
+     * @param gateId The gate ID
+     * @return The published gate
+     * @throws RynkoException if the request fails
+     */
+    public FlowGate publishGate(String gateId) throws RynkoException {
+        Map<String, Object> body = new HashMap<>();
+        return httpClient.postAbsolute(flowUrl("/gates/" + gateId + "/publish"), body, FlowGate.class);
+    }
+
+    /**
+     * Rolls back a gate to the previous version.
+     *
+     * @param gateId The gate ID
+     * @return The rolled-back gate
+     * @throws RynkoException if the request fails
+     */
+    public FlowGate rollbackGate(String gateId) throws RynkoException {
+        return rollbackGate(gateId, null);
+    }
+
+    /**
+     * Rolls back a gate to a specific version.
+     *
+     * @param gateId    The gate ID
+     * @param versionId The version ID to roll back to, or null for previous version
+     * @return The rolled-back gate
+     * @throws RynkoException if the request fails
+     */
+    public FlowGate rollbackGate(String gateId, String versionId) throws RynkoException {
+        Map<String, Object> body = new HashMap<>();
+        if (versionId != null) {
+            body.put("versionId", versionId);
+        }
+        return httpClient.postAbsolute(flowUrl("/gates/" + gateId + "/rollback"), body, FlowGate.class);
+    }
+
+    /**
+     * Exports a gate configuration.
+     *
+     * @param gateId The gate ID
+     * @return The exported gate data as a Map
+     * @throws RynkoException if the request fails
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> exportGate(String gateId) throws RynkoException {
+        return httpClient.getAbsolute(flowUrl("/gates/" + gateId + "/export"), Map.class);
+    }
+
+    /**
+     * Imports a gate configuration.
+     *
+     * @param data The gate data to import
+     * @return The imported gate
+     * @throws RynkoException if the request fails
+     */
+    public FlowGate importGate(Object data) throws RynkoException {
+        return httpClient.postAbsolute(flowUrl("/gates/import"), data, FlowGate.class);
+    }
+
+    /**
+     * Tests a gate with payload (dry-run, no run created).
+     *
+     * @param gateId  The gate ID
+     * @param payload The test payload
+     * @return The test result
+     * @throws RynkoException if the request fails
+     */
+    public TestGateResult testGate(String gateId, Map<String, Object> payload) throws RynkoException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("payload", payload);
+        return httpClient.postAbsolute(flowUrl("/gates/" + gateId + "/test"), body, TestGateResult.class);
+    }
+
+    /**
+     * Validates data against a gate (creates a run + validation_id).
+     *
+     * @param gateId  The gate ID
+     * @param request The validate request
+     * @return The created run with validation details
+     * @throws RynkoException if the request fails
+     */
+    public FlowRun validateGate(String gateId, ValidateGateRequest request) throws RynkoException {
+        return httpClient.postAbsolute(flowUrl("/gates/" + gateId + "/validate"), request, FlowRun.class);
+    }
+
+    /**
+     * Verifies a validation result.
+     *
+     * @param validationId The validation ID
+     * @param payload      The payload to verify
+     * @return The verification result
+     * @throws RynkoException if the request fails
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> verifyValidation(String validationId, Map<String, Object> payload) throws RynkoException {
+        Map<String, Object> body = new HashMap<>();
+        body.put("validationId", validationId);
+        if (payload != null) {
+            body.put("payload", payload);
+        }
+        return httpClient.postAbsolute(flowUrl("/verify"), body, Map.class);
     }
 
     // ---- Runs ----
@@ -279,6 +434,60 @@ public class FlowResource {
                 throw new RuntimeException("Interrupted while waiting for run " + runId, e);
             }
         }
+    }
+
+    /**
+     * Gets the payload for a run.
+     *
+     * @param runId The run ID
+     * @return The run payload as a Map
+     * @throws RynkoException if the request fails
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getRunPayload(String runId) throws RynkoException {
+        return httpClient.getAbsolute(flowUrl("/runs/" + runId + "/payload"), Map.class);
+    }
+
+    /**
+     * Gets a specific field from the run payload.
+     *
+     * @param runId The run ID
+     * @param field The field name to retrieve
+     * @return The field value as a Map
+     * @throws RynkoException if the request fails
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getRunPayload(String runId, String field) throws RynkoException {
+        Map<String, String> params = new HashMap<>();
+        params.put("field", field);
+        return httpClient.getAbsolute(flowUrl("/runs/" + runId + "/payload"), params, Map.class);
+    }
+
+    /**
+     * Gets the run chain for a correlation ID.
+     *
+     * @param correlationId The correlation ID
+     * @return Paginated list of runs in the chain
+     * @throws RynkoException if the request fails
+     */
+    public ListResponse<FlowRun> getRunChain(String correlationId) throws RynkoException {
+        FlowListResponse<FlowRun> response = httpClient.getAbsolute(
+                flowUrl("/runs/chain/" + correlationId), null,
+                new TypeReference<FlowListResponse<FlowRun>>() {});
+
+        return toListResponse(response, 1, 100);
+    }
+
+    /**
+     * Gets a transaction by ID.
+     *
+     * @param transactionId The transaction ID
+     * @return The transaction data as a Map
+     * @throws RynkoException if the request fails
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getTransaction(String transactionId) throws RynkoException {
+        return httpClient.getAbsolute(flowUrl("/transactions/" + transactionId), Map.class);
     }
 
     // ---- Approvals ----
